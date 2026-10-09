@@ -5,8 +5,98 @@
   <title>Accio</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🐕</text></svg>">
   <style>
-    /* ... keep all your existing styles ... */
+    ...
   </style>
+</head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Accio's Walk Checks</title>
+<style>
+  :root{--brown:#4a1c0e;--green:#d8f7dc;--green-b:#7be495;--orange:#fff0dc;--orange-b:#ffb86b;--pink:#ffe3ec;--pink-b:#ff9bb8;--bg:#fffaf5}
+  *{box-sizing:border-box}
+  body{margin:0;font-family:"Trebuchet MS","Segoe UI",sans-serif;background:var(--bg);color:#333;padding-bottom:80px}
+
+  header{text-align:center;padding:22px 10px 14px}
+  header .trail{font-size:1.4rem;letter-spacing:10px;opacity:.7}
+  header h1{margin:4px 0 0;color:var(--brown);font-size:2.4rem;line-height:1.05;text-shadow:3px 3px 0 var(--pink)}
+  header h1 span{color:var(--pink-b)}
+  header .sub{display:inline-block;margin-top:8px;padding:4px 18px;background:var(--pink);border:3px solid var(--pink-b);border-radius:20px;color:var(--brown);font-weight:bold;letter-spacing:1px}
+
+  nav{position:fixed;bottom:0;left:0;right:0;display:flex;background:#fff;border-top:3px solid var(--pink-b);z-index:10}
+  nav button{flex:1;padding:12px 2px;border:0;background:none;font-size:.82rem;color:var(--brown);cursor:pointer;font-weight:bold}
+  nav button.active{background:var(--pink)}
+  main{max-width:720px;margin:0 auto;padding:10px 14px}
+
+  section.card{border:3px solid var(--pink-b);border-radius:22px;padding:14px;margin-bottom:16px}
+  .in{background:var(--green)}
+  .out{background:var(--orange)}
+  .notes{background:var(--pink)}
+  .meta{background:#fff}
+  h2{margin:0 0 10px;color:var(--brown)}
+  label.q{display:block;font-weight:bold;margin:10px 0 4px}
+  input[type=text],input[type=date],select,textarea{width:100%;padding:10px;border-radius:14px;border:2.5px solid #ccc;font:inherit;background:#fff;color:#333}
+  select{min-height:44px;cursor:pointer}
+  textarea{min-height:70px;resize:vertical}
+  .row{display:flex;gap:10px}
+  .row>div{flex:1}
+  .paws{font-size:2rem;cursor:pointer;user-select:none;letter-spacing:4px}
+  .paws span{opacity:.25}
+  .paws span.on{opacity:1}
+  .checks label{display:block;margin:6px 0}
+  .chips{display:flex;flex-wrap:wrap;gap:8px}
+  .chips label{display:inline-flex;align-items:center;gap:6px;background:#fff;border:2.5px solid #ccc;border-radius:16px;padding:6px 12px;cursor:pointer;font-weight:normal;margin:0}
+  .chips label:has(input:checked){background:var(--pink);border-color:var(--pink-b)}
+  .yn{display:flex;gap:10px}
+  .yn label{flex:1;text-align:center;background:#fff;border:2.5px solid #ccc;border-radius:16px;padding:10px;cursor:pointer;font-weight:bold;margin:0}
+  .yn label:has(input:checked){background:var(--pink);border-color:var(--pink-b)}
+  .yn input{display:none}
+  button.main{width:100%;padding:14px;border:0;border-radius:18px;background:var(--pink-b);color:#fff;font-size:1.1rem;font-weight:bold;cursor:pointer;margin-top:8px}
+  button.small{padding:6px 12px;border:2px solid var(--brown);background:#fff;border-radius:12px;cursor:pointer;margin-right:6px}
+  .hidden{display:none}
+  .walk{background:#fff;border:2.5px solid var(--pink-b);border-radius:16px;padding:12px;margin-bottom:10px}
+  .walk h3{margin:0 0 4px;color:var(--brown)}
+  .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px}
+  .stat{background:#fff;border:2.5px solid var(--pink-b);border-radius:16px;padding:10px;text-align:center}
+  .stat b{display:block;font-size:1.6rem;color:var(--brown)}
+  canvas{width:100%;height:220px;background:#fff;border:2.5px solid var(--pink-b);border-radius:16px;margin-bottom:14px}
+  #toast{position:fixed;bottom:90px;left:50%;transform:translateX(-50%);background:var(--brown);color:#fff;padding:10px 18px;border-radius:20px;opacity:0;transition:.3s;pointer-events:none;z-index:20}
+  #toast.show{opacity:1}
+
+  /* ---------- Week Condensed ---------- */
+  .week-header{text-align:center;margin-bottom:12px}
+  .week-header h2{font-size:1.6rem;margin:0 0 2px;color:var(--brown)}
+  .week-header .subtitle{font-size:.85rem;color:#666;margin:0}
+  
+  .legend{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px;justify-content:center;font-size:.8rem}
+  .legend-item{display:flex;align-items:center;gap:4px;padding:4px 10px;background:#fff;border:2px solid var(--pink-b);border-radius:12px;color:var(--brown);font-weight:bold}
+  .legend-item .icon{font-size:.95rem}
+  
+  .weekgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:12px}
+  .day{border:3px solid var(--pink-b);border-radius:12px;padding:8px;background:#fff;min-height:auto}
+  .day h3{margin:0 0 6px;font-size:.9rem;color:var(--brown);text-align:center;display:flex;align-items:center;justify-content:center;gap:3px;font-weight:bold}
+  .day h3 .icon{font-size:1.1rem}
+  .day select{font-size:.7rem;padding:4px 6px;min-height:28px;border-radius:8px;border:2px solid var(--pink-b);margin-bottom:4px;cursor:pointer;color:var(--brown);font-weight:bold}
+  .day select:last-child{margin-bottom:0}
+  .day-paw{text-align:center;font-size:.9rem;opacity:.15;margin-top:2px}
+  
+  .week-notes{border:3px solid var(--pink-b);border-radius:14px;padding:10px;background:rgba(255,227,236,.2);margin-bottom:12px}
+  .week-notes h3{margin:0 0 6px;color:var(--brown);font-size:.95rem;display:flex;align-items:center;gap:4px}
+  .week-notes textarea{font-size:.85rem;border:2px solid var(--pink-b);min-height:60px}
+  
+  .week-cycle-note{border:3px solid var(--pink-b);border-radius:12px;padding:8px 10px;background:rgba(255,227,236,.3);display:flex;gap:6px;align-items:center;color:var(--brown);font-size:.85rem;font-weight:bold}
+  .week-cycle-note .icon{font-size:1.2rem;flex-shrink:0;color:var(--pink-b)}
+
+  /* ---------- Daily checks ---------- */
+  .dc-card{border:3px solid var(--pink-b);background:linear-gradient(#f0fff3,#e3fbe8);border-radius:20px;padding:12px}
+  .dc-card h2{display:flex;align-items:center;gap:6px;font-size:1.3rem;margin:0 0 10px}
+  .dc-card label.q{margin:8px 0 3px}
+  .dc-card input[type=date]{margin-bottom:10px}
+  .dc-item{display:flex;align-items:center;gap:12px;background:rgba(255,255,255,.8);border-radius:14px;padding:10px 12px;margin-bottom:8px;cursor:pointer;color:var(--brown);font-size:.95rem}
+  .dc-item input{appearance:none;-webkit-appearance:none;flex:none;width:30px;height:30px;border:3px solid #1e9e55;border-radius:8px;background:#fff;cursor:pointer;margin:0}
+  .dc-item input:checked{background:#1e9e55}
+  .dc-hist{background:#fff;border:2px solid var(--pink-b);border-radius:10px;padding:6px 10px;margin-bottom:6px;font-size:.85rem;color:var(--brown)}
+  .dc-hist button{float:right;font-size:.7rem;padding:3px 8px}
+</style>
 </head>
 <body>
 <header>
@@ -16,17 +106,58 @@
 </header>
 
 <main>
-<!-- ... your existing tabs ... -->
+
+<!-- NEW WALK -->
+<div id="tab-new">
+  <section class="card meta">
+    <div class="row">
+      <div><label class="q" for="date">Date</label><input type="date" id="date"></div>
+      <div><label class="q" for="category">Category</label><select id="category" style="background:#fff"></select></div>
+    </div>
+  </section>
+
+  <section class="card in">
+    <h2>✅ Check-in (before the walk)</h2>
+    <label class="q" for="expected">Expected level of difficulty</label>
+    <select id="expected"></select>
+    <label class="q">Possible triggers</label>
+    <div class="chips" id="triggersIn"></div>
+    <label class="q" for="accioMood">Accio's mood</label>
+    <select id="accioMood"></select>
+    <label class="q" for="myMood">My mood</label>
+    <select id="myMood"></select>
+    <label class="q" for="focus">Focus of the walk</label>
+    <select id="focus"></select>
+  </section>
+
+  <section class="card out">
+    <h2>🏁 Check-out (after the walk)</h2>
+    <label class="q" for="actual">Actual level of difficulty</label>
+    <select id="actual"></select>
+    <label class="q">Triggers encountered</label>
+    <div class="chips" id="triggersOut"></div>
+    <label class="q">Rate of the walk</label>
+    <div class="paws" id="paws"></div>
+    <label class="q">Did I do a break during the walk?</label>
+    <div class="yn">
+      <label><input type="radio" name="brk" value="Yes"> Yes</label>
+      <label><input type="radio" name="brk" value="No" checked> No</label>
+    </div>
+  </section>
+
+  <section class="card notes">
+    <h2>📝 Notes</h2>
+    <textarea id="notes"></textarea>
+  </section>
+
+  <button class="main" id="saveBtn" type="button">Save walk</button>
+</div>
 
 <!-- WEEK -->
 <div id="tab-week" class="hidden">
   <div class="week-header">
     <h2>📅 Weekly Walk Plan</h2>
     <p class="subtitle">Two walks per day</p>
-    <div class="week-selector">
-      <label for="weekStart">Week starting:</label>
-      <input type="date" id="weekStart" value="">
-    </div>
   </div>
 
   <div class="legend" id="legend"></div>
@@ -44,10 +175,53 @@
   </div>
 
   <button class="small" id="clearWeek" type="button" style="margin-top:8px">Clear week</button>
-  <button class="main" id="saveWeekBtn" type="button" style="margin-top:12px">Save weekly plan</button>
 </div>
 
-<!-- ... rest of your tabs ... -->
+<!-- DAILY CHECKS -->
+<div id="tab-daily" class="hidden">
+  <div class="dc-card">
+    <h2>📅 Daily Checks 💗</h2>
+    <label class="q" for="dcDate">Date</label>
+    <input type="date" id="dcDate">
+    <div id="dcList"></div>
+    <button class="main" id="dcSave" type="button">Save daily checks</button>
+  </div>
+  <h2 style="margin-top:12px;font-size:1.1rem">Recent days</h2>
+  <div id="dcHistory"></div>
+</div>
+
+<!-- HISTORY -->
+<div id="tab-history" class="hidden">
+  <select id="filterCat" style="margin-bottom:12px"></select>
+  <div id="historyList"></div>
+</div>
+
+<!-- PROGRESS -->
+<div id="tab-progress" class="hidden">
+  <div class="stats">
+    <div class="stat"><b id="sTotal">0</b>walks</div>
+    <div class="stat"><b id="sAvg">–</b>avg rating</div>
+    <div class="stat"><b id="sStreak">0</b>day streak</div>
+  </div>
+  <h2>Rating over time</h2>
+  <canvas id="chartTime" width="680" height="220"></canvas>
+  <h2>Average rating by category</h2>
+  <canvas id="chartCat" width="680" height="220"></canvas>
+
+  <h2 style="font-size:1.1rem">Daily checks: points per day (max 7)</h2>
+  <div class="stats">
+    <div class="stat"><b id="dcToday">–</b>today</div>
+    <div class="stat"><b id="dcAvg">–</b>avg / day</div>
+    <div class="stat"><b id="dcBest">–</b>best day</div>
+  </div>
+  <canvas id="chartDaily" width="680" height="220"></canvas>
+  <div id="dcTable"></div>
+
+  <button class="small" id="exportBtn" type="button">Export data</button>
+  <button class="small" id="importBtn" type="button">Import data</button>
+  <input type="file" id="importFile" accept="application/json" class="hidden">
+</div>
+
 </main>
 
 <nav>
@@ -60,7 +234,70 @@
 <div id="toast"></div>
 
 <script>
-// ... keep all your existing constants ...
+const $ = id => document.getElementById(id);
+
+// Set this to the deployed Google Apps Script Web App URL to enable sync.
+const SHEET_URL = "https://script.google.com/macros/s/AKfycbwCEyZlowQFv4uHYs9Kcxlh6rV2Xt8DbYdhI2Oc0-_Yz7AT6CqHbTXzADHOrKjn_JU3/exec";
+
+/* ---------- Options & Icons ---------- */
+const CATS = ["Bike Run","Canicross","Hike","Special Activity","Long Leash Walk","Short Leash Walk","Pee/Poop","Chill Long Leash walk"];
+const WEEK_CATS = ["Bike Run","Canicross","Hike","Special Activity","Long Leash Walk","Short Leash Walk","Chill Long Leash walk"];
+const DIFF = ["Super High","High","Medium","Easy"];
+const TRIG = ["Dog","Weather","People","Wildlife","New things","Other"];
+const MOOD = ["Excited","Normal","Tired"];
+const FOCUS = ["Work","Fun","Chill"];
+const DAYS = ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"];
+const DAY_SHORT = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
+
+const CAT_INFO = {
+  "Bike Run": { icon:"🚴", color:"green" },
+  "Canicross": { icon:"🐕‍🦺", color:"orange" },
+  "Hike": { icon:"⛰️", color:"orange" },
+  "Special Activity": { icon:"🎪", color:"green" },
+  "Long Leash Walk": { icon:"🔗", color:"red" },
+  "Short Leash Walk": { icon:"🪢", color:"red" },
+  "Pee/Poop": { icon:"💩", color:"red" },
+  "Chill Long Leash walk": {icon:"🐕‍🦺", color:"green"}
+};
+
+const CAT_BG = {
+  green: "#d8f7dc",
+  orange: "#fff0dc",
+  red: "#ffe3ec"
+};
+
+const DC_QUESTIONS = [
+  ["living","Slept in the living room?"],
+  ["kitchen","Out of the kitchen?"],
+  ["bedroom","Out of the bedroom?"],
+  ["toilet","Out of the the toilet?"],
+  ["toys","No free access to toys?"],
+  ["played","Did I decide on playtime?"],
+  ["place","Did I do place training?"]
+];
+
+/* ---------- Helpers ---------- */
+function load(key, fallback){
+  try{ const v = JSON.parse(localStorage.getItem(key)); return v ?? fallback; }
+  catch(e){ return fallback; }
+}
+function esc(s){
+  return String(s ?? "")
+    .replace(/&/g,"&").replace(/</g,"<").replace(/>/g,">")
+    .replace(/"/g,"'").replace(/'/g,"'");
+}
+function toast(msg){
+  const t = $("toast"); t.textContent = msg; t.classList.add("show");
+  setTimeout(()=>t.classList.remove("show"),1800);
+}
+function opts(sel, arr){ sel.innerHTML = arr.map(o=>`<option>${esc(o)}</option>`).join(""); }
+function chips(box, name){
+  box.innerHTML = TRIG.map(t=>`<label><input type="checkbox" name="${name}" value="${esc(t)}"> ${esc(t)}</label>`).join("");
+}
+function checked(name){
+  return [...document.querySelectorAll(`input[name="${name}"]:checked`)].map(i=>i.value);
+}
+function todayStr(){ return new Date().toISOString().slice(0,10); }
 
 /* ---------- Data ---------- */
 let walks = load("accioWalks_v3", []);
@@ -68,247 +305,374 @@ if(!Array.isArray(walks)) walks = [];
 let syncTimer = null;
 let syncInFlight = false;
 let syncQueued = false;
+function syncEnabled(){ return SHEET_URL && SHEET_URL !== "PASTE_YOUR_WEB_APP_URL_HERE"; }
+function renderAll(){
+  renderWeek(); renderDailyForm(); renderDailyHistory(); renderHistory();
+  renderProgress(); renderDailyReport();
+}
+function syncPayload(){ return {walks, daily}; }
+function scheduleSync(){
+  if(!syncEnabled()) return;
+  clearTimeout(syncTimer);
+  syncTimer = setTimeout(syncNow, 450);
+}
+async function syncNow(){
+  if(!syncEnabled()) return;
+  if(syncInFlight){ syncQueued = true; return; }
+  syncInFlight = true;
+  try{
+    const res = await fetch(SHEET_URL, {
+      method: "POST",
+      headers: {"Content-Type":"text/plain;charset=utf-8"},
+      body: JSON.stringify(syncPayload())
+    });
+    if(!res.ok) throw new Error("HTTP " + res.status);
+  }catch(e){ console.error(e); toast("Sync failed: " + e.message); }
+  finally{
+    syncInFlight = false;
+    if(syncQueued){ syncQueued = false; scheduleSync(); }
+  }
+}
+function save(){
+  localStorage.setItem("accioWalks_v3", JSON.stringify(walks));
+  scheduleSync();
+}
 
-// NEW: Weekly walks data structure
 let week = load("accioWeek_v1", null);
-if(!week || !week.days) week = { weekStarting: todayStr(), days: {}, notes: "" };
-
-DAYS.forEach(d => {
-  if(!week.days[d]) week.days[d] = { walks: ["", ""] };
-  week.days[d].walks = (week.days[d].walks||[]).map(c => WEEK_CATS.includes(c) ? c : "");
-  while(week.days[d].walks.length < 2) week.days[d].walks.push("");
-  week.days[d].walks = week.days[d].walks.slice(0, 2);
+if(!week || !week.days) week = {days:{}, notes:""};
+DAYS.forEach(d=>{
+  if(!week.days[d]) week.days[d] = {walks:["",""]};
+  week.days[d].walks = (week.days[d].walks||[]).map(c=>WEEK_CATS.includes(c)?c:"");
+  while(week.days[d].walks.length<2) week.days[d].walks.push("");
+  week.days[d].walks = week.days[d].walks.slice(0,2);
 });
+function saveWeek(){ localStorage.setItem("accioWeek_v1", JSON.stringify(week)); }
 
 let daily = load("accioDaily_v1", {});
-if(!daily || typeof daily !== "object" || Array.isArray(daily)) daily = {};
-
-// NEW: Set default week start date to Monday of current week
-function setDefaultWeekStart() {
-  const today = new Date();
-  const monday = new Date(today);
-  monday.setDate(today.getDate() - ((today.getDay() + 6) % 7));
-  $("weekStart").value = monday.toISOString().slice(0, 10);
+if(!daily || typeof daily!=="object" || Array.isArray(daily)) daily = {};
+function saveDaily(){
+  localStorage.setItem("accioDaily_v1", JSON.stringify(daily));
+  scheduleSync();
 }
-
-/* ---------- Sync with Google Sheets ---------- */
-function syncPayload() {
-  return {
-    walks: walks,
-    daily: daily,
-    weeklyWalks: getWeeklyWalksData() // NEW: Include weekly walks
-  };
-}
-
-function getWeeklyWalksData() {
-  const weeklyData = [];
-  const weekStart = new Date($("weekStart").value);
-  const weekDays = [];
-
-  // Create array of days for this week
-  for (let i = 0; i < 7; i++) {
-    const day = new Date(weekStart);
-    day.setDate(day.getDate() + i);
-    weekDays.push(day.toISOString().slice(0, 10));
-  }
-
-  // Convert to the format expected by the script
-  weekDays.forEach(day => {
-    const dayName = DAYS[new Date(day).getDay()];
-    if (week.days[dayName]) {
-      weeklyData.push({
-        weekStarting: week.weekStarting,
-        day: dayName,
-        walk1: week.days[dayName].walks[0] || "",
-        walk2: week.days[dayName].walks[1] || "",
-        notes: week.notes
-      });
+async function loadFromSheet(){
+  if(!syncEnabled()) return;
+  try{
+    const res = await fetch(SHEET_URL, {method:"GET", cache:"no-store"});
+    if(!res.ok) throw new Error("HTTP " + res.status);
+    const remote = await res.json();
+    if(remote && Array.isArray(remote.walks) && remote.walks.length){
+      const byId = new Map(walks.map(w=>[String(w.id), w]));
+      remote.walks.forEach(w=>{ if(w && w.id != null) byId.set(String(w.id), w); });
+      walks = [...byId.values()];
+      localStorage.setItem("accioWalks_v3", JSON.stringify(walks));
     }
-  });
-
-  return weeklyData;
+    if(remote && remote.daily && typeof remote.daily === "object" && !Array.isArray(remote.daily) && Object.keys(remote.daily).length){
+      daily = Object.assign({}, daily, remote.daily);
+      localStorage.setItem("accioDaily_v1", JSON.stringify(daily));
+    }
+    renderAll();
+  }catch(e){ console.error(e); toast("Sync failed: " + e.message); }
 }
 
-async function saveWeek() {
-  saveWeekLocal();
-  if(syncEnabled()) {
-    try {
-      const response = await fetch(SHEET_URL, {
-        method: "POST",
-        headers: {"Content-Type":"text/plain;charset=utf-8"},
-        body: JSON.stringify(syncPayload())
-      });
-      if(!response.ok) throw new Error("HTTP " + response.status);
-      toast("Weekly plan saved to Google Sheets 🐾");
-    } catch(e) {
-      console.error(e);
-      toast("Sync failed: " + e.message);
-    }
+/* ---------- Setup forms ---------- */
+function fillCats(){
+  opts($("category"), CATS);
+  $("filterCat").innerHTML = `<option value="">All categories</option>` + CATS.map(c=>`<option>${esc(c)}</option>`).join("");
+  $("filterCat").onchange = renderHistory;
+  opts($("expected"), DIFF); opts($("actual"), DIFF);
+  opts($("accioMood"), MOOD); opts($("myMood"), MOOD);
+  opts($("focus"), FOCUS);
+  chips($("triggersIn"), "tin"); chips($("triggersOut"), "tout");
+
+  // Update category select color on change
+  $("category").onchange = () => updateCatColor($("category"));
+  
+  // SET INITIAL COLOR
+  updateCatColor($("category"));
+}
+
+function updateCatColor(sel){
+  const cat = sel.value;
+  if(cat && CAT_INFO[cat]){
+    sel.style.background = CAT_BG[CAT_INFO[cat].color];
+    sel.style.color = "#4a1c0e";
   } else {
-    toast("Weekly plan saved locally 🐾");
+    sel.style.background = "#fff";
+    sel.style.color = "#333";
   }
 }
 
-function saveWeekLocal() {
-  week.weekStarting = $("weekStart").value;
-  week.notes = $("weekNotes").value;
-  localStorage.setItem("accioWeek_v1", JSON.stringify(week));
+/* ---------- Rating ---------- */
+let rating = 0;
+function drawPaws(){
+  $("paws").innerHTML = [1,2,3,4,5].map(i=>`<span data-v="${i}" class="${i<=rating?"on":""}">🐾</span>`).join("");
+  $("paws").querySelectorAll("span").forEach(s=>s.onclick=()=>{ rating=+s.dataset.v; drawPaws(); });
 }
 
-/* ---------- Weekly Walk UI Functions ---------- */
-function renderWeek() {
-  const weekStart = new Date($("weekStart").value);
-  const weekDays = [];
-
-  // Create array of days for this week
-  for (let i = 0; i < 7; i++) {
-    const day = new Date(weekStart);
-    day.setDate(day.getDate() + i);
-    weekDays.push({
-      date: day.toISOString().slice(0, 10),
-      dayName: DAYS[day.getDay()],
-      shortName: DAY_SHORT[day.getDay()]
-    });
-  }
-
-  // Build the week grid
-  const grid = $("weekGrid");
-  grid.innerHTML = weekDays.map((day, index) => {
-    const dayWalks = week.days[day.dayName] || { walks: ["", ""] };
-    return `
-      <div class="week-day-card">
-        <h3>${day.shortName}</h3>
-        <div class="week-walks">
-          <div class="week-walk">
-            <select class="week-walk-select" data-day="${day.dayName}" data-walk="0">
-              <option value="">–</option>
-              ${WEEK_CATS.map(cat => `
-                <option value="${esc(cat)}" ${dayWalks.walks[0] === cat ? 'selected' : ''}>
-                  ${CAT_INFO[cat]?.icon || ''} ${esc(cat)}
-                </option>
-              `).join('')}
-            </select>
-          </div>
-          <div class="week-walk">
-            <select class="week-walk-select" data-day="${day.dayName}" data-walk="1">
-              <option value="">–</option>
-              ${WEEK_CATS.map(cat => `
-                <option value="${esc(cat)}" ${dayWalks.walks[1] === cat ? 'selected' : ''}>
-                  ${CAT_INFO[cat]?.icon || ''} ${esc(cat)}
-                </option>
-              `).join('')}
-            </select>
-          </div>
-        </div>
-      </div>
-    `;
-  }).join('');
-
-  // Add event listeners to walk selects
-  document.querySelectorAll('.week-walk-select').forEach(select => {
-    select.addEventListener('change', function() {
-      const dayName = this.dataset.day;
-      const walkIndex = parseInt(this.dataset.walk);
-      if(!week.days[dayName]) week.days[dayName] = { walks: ["", ""] };
-      week.days[dayName].walks[walkIndex] = this.value;
-    });
+/* ---------- Save walk ---------- */
+$("saveBtn").onclick = () => {
+  if(!$("date").value){ toast("Pick a date"); return; }
+  if(!rating){ toast("Give a rating"); return; }
+  walks.push({
+    id: Date.now(),
+    date: $("date").value,
+    category: $("category").value,
+    expected: $("expected").value,
+    triggersIn: checked("tin"),
+    accioMood: $("accioMood").value,
+    myMood: $("myMood").value,
+    focus: $("focus").value,
+    actual: $("actual").value,
+    triggersOut: checked("tout"),
+    rating,
+    brk: (document.querySelector('input[name="brk"]:checked')||{}).value || "No",
+    notes: $("notes").value
   });
+  save(); clearForm(); toast("Walk saved 🐾");
+};
+function clearForm(){
+  $("date").value = todayStr();
+  $("notes").value = "";
+  document.querySelectorAll('.chips input').forEach(i=>i.checked=false);
+  ["expected","actual","accioMood","myMood","focus","category"].forEach(i=>$(i).selectedIndex=0);
+  document.querySelector('input[name="brk"][value="No"]').checked = true;
+  rating = 0; drawPaws();
+  updateCatColor($("category"));
+}
 
-  // Set week notes
+/* ---------- Week ---------- */
+function renderWeek(){
+  $("legend").innerHTML = WEEK_CATS.map(c=>`<div class="legend-item"><span class="icon">${CAT_INFO[c].icon}</span> ${esc(c)}</div>`).join("");
+  const jsDay = (new Date().getDay()+6)%7;
+  $("weekGrid").innerHTML = DAYS.map((d,i)=>{
+    const w = week.days[d].walks;
+    const sel = n => `<select data-day="${d}" data-n="${n}" style="background:${w[n] && CAT_INFO[w[n]]?CAT_BG[CAT_INFO[w[n]].color]:"#fff"}"><option value="">–</option>` +
+      WEEK_CATS.map(c=>`<option value="${esc(c)}" style="background:${CAT_BG[CAT_INFO[c].color]}">${CAT_INFO[c].icon} ${esc(c)}</option>`).join("") + `</select>`;
+    return `<div class="day"><h3><span class="icon">${DAY_SHORT[i]}</span></h3>${sel(0)}${sel(1)}<div class="day-paw">🐾</div></div>`;
+  }).join("");
+  $("weekGrid").querySelectorAll("select").forEach(s=>{
+    s.onchange = () => {
+      week.days[s.dataset.day].walks[+s.dataset.n] = s.value;
+      saveWeek();
+      s.style.background = s.value && CAT_INFO[s.value] ? CAT_BG[CAT_INFO[s.value].color] : "#fff";
+    };
+  });
   $("weekNotes").value = week.notes || "";
+  $("weekNotes").onchange = () => { week.notes = $("weekNotes").value; saveWeek(); };
 }
-
-function clearWeek() {
-  if(confirm("Clear this week's plan?")) {
-    week.days = {};
-    DAYS.forEach(d => week.days[d] = { walks: ["", ""] });
-    week.notes = "";
-    $("weekNotes").value = "";
-    renderWeek();
-    saveWeekLocal();
-    toast("Week cleared 🐾");
-  }
-}
-
-$("saveWeekBtn").onclick = saveWeek;
-$("clearWeek").onclick = clearWeek;
-$("weekStart").addEventListener('change', function() {
-  week.weekStarting = this.value;
-  renderWeek();
-});
-
-/* ---------- Backup/Import with Weekly Walks ---------- */
-$("exportBtn").onclick = () => {
-  const blob = new Blob([JSON.stringify({
-    walks,
-    week,
-    daily
-  }, null, 2)], {type:"application/json"});
-  const a = document.createElement("a");
-  a.href = URL.createObjectURL(blob);
-  a.download = "accio-walks-"+todayStr()+".json";
-  a.click();
+$("clearWeek").onclick = () => {
+  if(!confirm("Clear the whole week?")) return;
+  DAYS.forEach(d=>week.days[d] = {walks:["",""]});
+  week.notes = "";
+  saveWeek(); renderWeek(); toast("Week cleared");
 };
 
+/* ---------- Daily checks ---------- */
+function renderDailyForm(){
+  const date = $("dcDate").value;
+  const cur = daily[date] || {};
+  $("dcList").innerHTML = DC_QUESTIONS.map(([k,q])=>
+    `<label class="dc-item"><input type="checkbox" data-k="${k}" ${cur[k]?"checked":""}><span>${esc(q)}</span></label>`
+  ).join("");
+}
+function renderDailyHistory(){
+  const dates = Object.keys(daily).sort().reverse().slice(0,14);
+  $("dcHistory").innerHTML = dates.length ? dates.map(d=>{
+    const n = DC_QUESTIONS.filter(([k])=>daily[d][k]).length;
+    return `<div class="dc-hist"><b>${esc(d)}</b> · ${n}/${DC_QUESTIONS.length} <button class="small" data-del="${esc(d)}" type="button">Delete</button></div>`;
+  }).join("") : "<p>No daily checks yet.</p>";
+}
+$("dcDate").value = todayStr();
+$("dcDate").onchange = renderDailyForm;
+$("dcSave").onclick = () => {
+  const date = $("dcDate").value;
+  if(!date){ toast("Pick a date"); return; }
+  const rec = {};
+  $("dcList").querySelectorAll("input[data-k]").forEach(i=> rec[i.dataset.k] = i.checked);
+  daily[date] = rec; saveDaily(); renderDailyHistory(); toast("Daily checks saved 🐾");
+};
+$("dcHistory").addEventListener("click", e=>{
+  const b = e.target.closest("button[data-del]");
+  if(!b || !confirm("Delete this day?")) return;
+  delete daily[b.dataset.del]; saveDaily(); renderDailyHistory(); renderDailyForm();
+});
+
+/* ---------- History ---------- */
+function renderHistory(){
+  const f = $("filterCat").value;
+  const list = walks.filter(w=>!f || w.category===f).sort((a,b)=>b.date.localeCompare(a.date));
+  const join = a => Array.isArray(a) && a.length ? a.join(", ") : "–";
+  $("historyList").innerHTML = list.length ? list.map(w=>`
+    <div class="walk">
+      <h3>${esc(w.date)} · ${esc(w.category)} · ${"🐾".repeat(w.rating||0)}</h3>
+      <div>Difficulty: expected ${esc(w.expected||"–")} → actual ${esc(w.actual||"–")}</div>
+      <div>Moods: Accio ${esc(w.accioMood||"–")} · Me ${esc(w.myMood||"–")} · Focus ${esc(w.focus||"–")}</div>
+      <div>Possible triggers: ${esc(join(w.triggersIn))}</div>
+      <div>Triggers met: ${esc(join(w.triggersOut))}</div>
+      <div>Break: ${esc(w.brk||"–")}</div>
+      ${w.notes?`<div>📝 ${esc(w.notes)}</div>`:""}
+      <button class="small" onclick="delWalk(${w.id})" style="margin-top:6px">Delete</button>
+    </div>`).join("") : "<p>No walks yet.</p>";
+}
+function delWalk(id){
+  if(!confirm("Delete this walk?")) return;
+  walks = walks.filter(w=>w.id!==id); save(); renderHistory(); toast("Deleted");
+}
+
+/* ---------- Charts ---------- */
+function drawAxes(x, w, h, max){
+  x.clearRect(0,0,w,h);
+  x.strokeStyle="#ddd"; x.fillStyle="#666"; x.font="12px sans-serif"; x.textAlign="left";
+  for(let i=1;i<=max;i++){
+    const y = h-30-(i/max)*(h-50);
+    x.beginPath(); x.moveTo(30,y); x.lineTo(w-10,y); x.stroke();
+    x.fillText(i,10,y+4);
+  }
+}
+function drawLine(cv, vals, labels){
+  const x = cv.getContext("2d"), w = cv.width, h = cv.height;
+  drawAxes(x,w,h,5);
+  if(!vals.length){ x.fillText("No data yet",40,h/2); return; }
+  const step = vals.length>1 ? (w-60)/(vals.length-1) : 0;
+  const px = i => vals.length>1 ? 40+i*step : w/2;
+  const py = v => h-30-(v/5)*(h-50);
+  x.strokeStyle="#ff9bb8"; x.lineWidth=3; x.beginPath();
+  vals.forEach((v,i)=> i?x.lineTo(px(i),py(v)):x.moveTo(px(i),py(v)));
+  x.stroke();
+  x.fillStyle="#ff9bb8";
+  vals.forEach((v,i)=>{ x.beginPath(); x.arc(px(i),py(v),4,0,7); x.fill(); });
+  x.fillStyle="#666"; x.lineWidth=1;
+  const every = Math.ceil(vals.length/6);
+  labels.forEach((l,i)=>{ if(i%every===0) x.fillText(l.slice(5),px(i)-14,h-10); });
+}
+function drawBars(cv, vals, labels){
+  const x = cv.getContext("2d"), w = cv.width, h = cv.height;
+  drawAxes(x,w,h,5);
+  if(!vals.length){ x.fillText("No data yet",40,h/2); return; }
+  const slot = (w-50)/vals.length, bw = Math.min(50, slot*0.6);
+  vals.forEach((v,i)=>{
+    const bx = 40+i*slot+(slot-bw)/2, bh = (v/5)*(h-50);
+    x.fillStyle="#7be495"; x.fillRect(bx,h-30-bh,bw,bh);
+    x.fillStyle="#4a1c0e"; x.textAlign="center";
+    x.fillText(v.toFixed(1),bx+bw/2,h-34-bh);
+    x.font="10px sans-serif";
+    x.fillText(labels[i].length>11?labels[i].slice(0,10)+"…":labels[i],bx+bw/2,h-14);
+    x.font="12px sans-serif";
+  });
+  x.textAlign="left";
+}
+
+/* ---------- Progress ---------- */
+function renderProgress(){
+  $("sTotal").textContent = walks.length;
+  $("sAvg").textContent = walks.length ? (walks.reduce((s,w)=>s+(w.rating||0),0)/walks.length).toFixed(1) : "–";
+  const days = new Set(walks.map(w=>w.date));
+  let streak = 0, d = new Date();
+  if(!days.has(d.toISOString().slice(0,10))) d.setDate(d.getDate()-1);
+  while(days.has(d.toISOString().slice(0,10))){ streak++; d.setDate(d.getDate()-1); }
+  $("sStreak").textContent = streak;
+
+  const sorted = walks.slice().sort((a,b)=>a.date.localeCompare(b.date));
+  drawLine($("chartTime"), sorted.map(w=>w.rating||0), sorted.map(w=>w.date));
+
+  const by = {};
+  walks.forEach(w=>{ (by[w.category] = by[w.category] || []).push(w.rating||0); });
+  const labels = Object.keys(by);
+  drawBars($("chartCat"), labels.map(l=>by[l].reduce((a,b)=>a+b,0)/by[l].length), labels);
+}
+
+/* ---------- Daily points report ---------- */
+function dcPoints(rec){ return DC_QUESTIONS.filter(([k])=>rec && rec[k]).length; }
+function renderDailyReport(){
+  const dates = Object.keys(daily).sort();
+  const pts = dates.map(d=>dcPoints(daily[d]));
+  const today = todayStr();
+  $("dcToday").textContent = daily[today] ? pts[dates.indexOf(today)] : "–";
+  $("dcAvg").textContent = pts.length ? (pts.reduce((a,b)=>a+b,0)/pts.length).toFixed(1) : "–";
+  $("dcBest").textContent = pts.length ? Math.max(...pts) : "–";
+
+  const last = dates.slice(-30), lp = pts.slice(-30);
+  const cv = $("chartDaily"), x = cv.getContext("2d"), w = cv.width, h = cv.height;
+  x.clearRect(0,0,w,h);
+  x.font = "12px sans-serif"; x.textAlign = "left";
+  const max = DC_QUESTIONS.length, top = 20, bot = h-30, left = 30, right = w-10;
+  x.strokeStyle = "#ddd"; x.fillStyle = "#666";
+  for(let i=0;i<=max;i++){
+    const y = bot - (i/max)*(bot-top);
+    x.beginPath(); x.moveTo(left,y); x.lineTo(right,y); x.stroke();
+    x.fillText(i, 10, y+4);
+  }
+  if(!last.length){ x.fillText("No daily checks yet", left+10, h/2); $("dcTable").innerHTML=""; return; }
+  const slot = (right-left)/last.length, bw = Math.min(30, slot*0.7);
+  last.forEach((d,i)=>{
+    const bx = left + i*slot + (slot-bw)/2;
+    const bh = (lp[i]/max)*(bot-top);
+    x.fillStyle = lp[i]===max ? "#7be495" : lp[i]>=max/2 ? "#ffb86b" : "#ff9bb8";
+    x.fillRect(bx, bot-bh, bw, bh);
+    x.fillStyle = "#4a1c0e"; x.textAlign = "center";
+    x.fillText(lp[i], bx+bw/2, bot-bh-4);
+    if(last.length<=15 || i%Math.ceil(last.length/12)===0) x.fillText(d.slice(5), bx+bw/2, h-10);
+  });
+  x.textAlign = "left";
+
+  $("dcTable").innerHTML = dates.slice().reverse().slice(0,14).map(d=>
+    `<div class="dc-hist"><b>${esc(d)}</b> · ${dcPoints(daily[d])}/${DC_QUESTIONS.length} points</div>`
+  ).join("");
+}
+
+/* ---------- Backup ---------- */
+$("exportBtn").onclick = () => {
+  const blob = new Blob([JSON.stringify({walks, week, daily},null,2)],{type:"application/json"});
+  const a = document.createElement("a"); a.href = URL.createObjectURL(blob);
+  a.download = "accio-walks-"+todayStr()+".json"; a.click();
+};
+$("importBtn").onclick = () => $("importFile").click();
 $("importFile").onchange = e => {
-  const f = e.target.files[0];
-  if(!f) return;
+  const f = e.target.files[0]; if(!f) return;
   const r = new FileReader();
   r.onload = () => {
-    try {
+    try{
       const d = JSON.parse(r.result);
       if(!Array.isArray(d.walks)) throw 0;
-
-      if(confirm("Replace current data with the imported file?")) {
-        walks = d.walks;
-        save();
-
-        if(d.week && d.week.days) {
+      if(confirm("Replace current data with the imported file?")){
+        walks = d.walks; save();
+        if(d.week && d.week.days){
           week = d.week;
-          // Ensure week has proper structure
-          if(!week.weekStarting) week.weekStarting = todayStr();
-          if(!week.notes) week.notes = "";
-          DAYS.forEach(x => {
-            if(!week.days[x]) week.days[x] = { walks: ["", ""] };
-            week.days[x].walks = (week.days[x].walks||[]).map(c => WEEK_CATS.includes(c) ? c : "");
-            while(week.days[x].walks.length < 2) week.days[x].walks.push("");
-            week.days[x].walks = week.days[x].walks.slice(0, 2);
+          DAYS.forEach(x=>{
+            if(!week.days[x]) week.days[x] = {walks:["",""]};
+            week.days[x].walks = (week.days[x].walks||[]).map(c=>WEEK_CATS.includes(c)?c:"");
+            while(week.days[x].walks.length<2) week.days[x].walks.push("");
+            week.days[x].walks = week.days[x].walks.slice(0,2);
           });
-          saveWeekLocal();
+          saveWeek();
         }
-
-        if(d.daily && typeof d.daily==="object") {
-          daily = d.daily;
-          saveDaily();
-        }
-
-        // Update UI
-        setDefaultWeekStart();
-        renderAll();
+        if(d.daily && typeof d.daily==="object"){ daily = d.daily; saveDaily(); }
+        renderProgress(); renderDailyReport(); renderDailyForm(); renderDailyHistory();
         toast("Imported ✔");
       }
-    } catch(err) {
-      console.error(err);
-      toast("Invalid file");
-    }
+    }catch(err){ toast("Invalid file"); }
   };
   r.readAsText(f);
 };
 
-/* ---------- Initialize ---------- */
-function renderAll() {
-  renderWeek();
-  renderDailyForm();
-  renderDailyHistory();
-  renderHistory();
-  renderProgress();
-  renderDailyReport();
+/* ---------- Tabs ---------- */
+function show(tab){
+  ["new","week","daily","history","progress"].forEach(t=>$("tab-"+t).classList.toggle("hidden", t!==tab));
+  document.querySelectorAll("nav button").forEach(b=>b.classList.toggle("active", b.dataset.tab===tab));
+  if(tab==="week") renderWeek();
+  if(tab==="daily"){ renderDailyForm(); renderDailyHistory(); }
+  if(tab==="history") renderHistory();
+  if(tab==="progress"){ renderProgress(); renderDailyReport(); }
 }
+document.querySelectorAll("nav button").forEach(b=>b.onclick=()=>show(b.dataset.tab));
 
-// Set default week start when page loads
-setDefaultWeekStart();
+/* ---------- Start ---------- */
+fillCats();
+clearForm();
 renderWeek();
+renderDailyForm();
 loadFromSheet();
 </script>
+<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v4bc70e2c01a94c73b74392e4234840661791215815920" integrity="sha512-L0ha0OXavK/8okipN9F8BtP84dg9DUhPERbBXzwI6dgTA55d2+yweo3pn5CSFYs45/r8md2+xvUPtTdvTNRfjA==" data-cf-beacon='{"version":"2024.11.0","token":"8607d2a720d14b038279025b2b5a82e5","spa":2}' crossorigin="anonymous"></script>
 </body>
 </html>
