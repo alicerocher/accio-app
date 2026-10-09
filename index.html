@@ -229,6 +229,9 @@
 <script>
 const $ = id => document.getElementById(id);
 
+// Set this to the deployed Google Apps Script Web App URL to enable sync.
+const SHEET_URL = "https://script.google.com/macros/s/AKfycbyBjBX_C6moJ2JCxzD42x7Waw6zsMWWbjkvLOskQSgzbqtZUzpKgQglkn8LeV6oDzSr/exec";
+
 /* ---------- Options & Icons ---------- */
 const CATS = ["Bike Run","Canicross","Hike","Special Activity","Long Leash Walk","Short Leash Walk","Pee/Poop"];
 const WEEK_CATS = ["Bike Run","Canicross","Hike","Special Activity","Long Leash Walk","Short Leash Walk"];
@@ -291,7 +294,41 @@ function todayStr(){ return new Date().toISOString().slice(0,10); }
 /* ---------- Data ---------- */
 let walks = load("accioWalks_v3", []);
 if(!Array.isArray(walks)) walks = [];
-function save(){ localStorage.setItem("accioWalks_v3", JSON.stringify(walks)); }
+let syncTimer = null;
+let syncInFlight = false;
+let syncQueued = false;
+function syncEnabled(){ return SHEET_URL && SHEET_URL !== "PASTE_YOUR_WEB_APP_URL_HERE"; }
+function renderAll(){
+  renderWeek(); renderDailyForm(); renderDailyHistory(); renderHistory();
+  renderProgress(); renderDailyReport();
+}
+function syncPayload(){ return {walks, daily}; }
+function scheduleSync(){
+  if(!syncEnabled()) return;
+  clearTimeout(syncTimer);
+  syncTimer = setTimeout(syncNow, 450);
+}
+async function syncNow(){
+  if(!syncEnabled()) return;
+  if(syncInFlight){ syncQueued = true; return; }
+  syncInFlight = true;
+  try{
+    const res = await fetch(SHEET_URL, {
+      method: "POST",
+      headers: {"Content-Type":"text/plain;charset=utf-8"},
+      body: JSON.stringify(syncPayload())
+    });
+    if(!res.ok) throw new Error("HTTP " + res.status);
+  }catch(e){ toast("Sync failed"); }
+  finally{
+    syncInFlight = false;
+    if(syncQueued){ syncQueued = false; scheduleSync(); }
+  }
+}
+function save(){
+  localStorage.setItem("accioWalks_v3", JSON.stringify(walks));
+  scheduleSync();
+}
 
 let week = load("accioWeek_v1", null);
 if(!week || !week.days) week = {days:{}, notes:""};
@@ -305,7 +342,29 @@ function saveWeek(){ localStorage.setItem("accioWeek_v1", JSON.stringify(week));
 
 let daily = load("accioDaily_v1", {});
 if(!daily || typeof daily!=="object" || Array.isArray(daily)) daily = {};
-function saveDaily(){ localStorage.setItem("accioDaily_v1", JSON.stringify(daily)); }
+function saveDaily(){
+  localStorage.setItem("accioDaily_v1", JSON.stringify(daily));
+  scheduleSync();
+}
+async function loadFromSheet(){
+  if(!syncEnabled()) return;
+  try{
+    const res = await fetch(SHEET_URL, {method:"GET", cache:"no-store"});
+    if(!res.ok) throw new Error("HTTP " + res.status);
+    const remote = await res.json();
+    if(remote && Array.isArray(remote.walks) && remote.walks.length){
+      const byId = new Map(walks.map(w=>[String(w.id), w]));
+      remote.walks.forEach(w=>{ if(w && w.id != null) byId.set(String(w.id), w); });
+      walks = [...byId.values()];
+      localStorage.setItem("accioWalks_v3", JSON.stringify(walks));
+    }
+    if(remote && remote.daily && typeof remote.daily === "object" && !Array.isArray(remote.daily) && Object.keys(remote.daily).length){
+      daily = Object.assign({}, daily, remote.daily);
+      localStorage.setItem("accioDaily_v1", JSON.stringify(daily));
+    }
+    renderAll();
+  }catch(e){ toast("Sync failed"); }
+}
 
 /* ---------- Setup forms ---------- */
 function fillCats(){
@@ -604,6 +663,8 @@ fillCats();
 clearForm();
 renderWeek();
 renderDailyForm();
+loadFromSheet();
 </script>
+<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v4bc70e2c01a94c73b74392e4234840661791215815920" integrity="sha512-L0ha0OXavK/8okipN9F8BtP84dg9DUhPERbBXzwI6dgTA55d2+yweo3pn5CSFYs45/r8md2+xvUPtTdvTNRfjA==" data-cf-beacon='{"version":"2024.11.0","token":"8607d2a720d14b038279025b2b5a82e5","spa":2}' crossorigin="anonymous"></script>
 </body>
 </html>
