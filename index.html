@@ -241,8 +241,8 @@
 const $ = id => document.getElementById(id);
 
 /* ---------- Options & Icons ---------- */
-const CATS = ["Bike Run","Canicross","Hike","Special Activity","Long Leash Walk","Short Leash Walk","Pee/Poop"];
-const WEEK_CATS = ["Bike Run","Canicross","Hike","Special Activity","Long Leash Walk","Short Leash Walk"];
+const CATS = ["Bike Run","Canicross","Hike","Special Activity","Long Leash Walk","Short Leash Walk","Pee/Poop","Chill Long Leash Walk"];
+const WEEK_CATS = ["Bike Run","Canicross","Hike","Special Activity","Long Leash Walk","Short Leash Walk", "Chill Long Leash Walk"];
 const DIFF = ["Super High","High","Medium","Easy"];
 const TRIG = ["Dog","Weather","People","Wildlife","New things","Other"];
 const MOOD = ["Excited","Normal","Tired"];
@@ -257,7 +257,8 @@ const CAT_INFO = {
   "Special Activity": { icon:"🎪", color:"green" },
   "Long Leash Walk": { icon:"🔗", color:"red" },
   "Short Leash Walk": { icon:"🪢", color:"red" },
-  "Pee/Poop": { icon:"💩", color:"red" }
+  "Pee/Poop": { icon:"💩", color:"red" },
+  "Chill Long Leash Walk": {icon:"🔗",color:"green"}
 };
 
 const CAT_BG = {
@@ -268,11 +269,11 @@ const CAT_BG = {
 
 const DC_QUESTIONS = [
   ["living","Slept in the living room?"],
-  ["kitchen","Did she enter the kitchen?"],
-  ["bedroom","Did she enter the bedroom?"],
-  ["toilet","Did she enter the toilet?"],
-  ["toys","Did she have free access to toys?"],
-  ["played","Did I play with her when I did not want to?"],
+  ["kitchen","Did not enter the kitchen?"],
+  ["bedroom","Did not enter the bedroom?"],
+  ["toilet","Did not enter the toilet?"],
+  ["toys","Did not have free access to toys?"],
+  ["played","Did I decide on play time?"],
   ["place","Did I do place training?"]
 ];
 
