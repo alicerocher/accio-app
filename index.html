@@ -319,7 +319,7 @@ async function syncNow(){
       body: JSON.stringify(syncPayload())
     });
     if(!res.ok) throw new Error("HTTP " + res.status);
-  }catch(e){ toast("Sync failed"); }
+  }catch(e){ console.error(e); toast("Sync failed: " + e.message); }
   finally{
     syncInFlight = false;
     if(syncQueued){ syncQueued = false; scheduleSync(); }
@@ -363,7 +363,7 @@ async function loadFromSheet(){
       localStorage.setItem("accioDaily_v1", JSON.stringify(daily));
     }
     renderAll();
-  }catch(e){ toast("Sync failed"); }
+  }catch(e){ console.error(e); toast("Sync failed: " + e.message); }
 }
 
 /* ---------- Setup forms ---------- */
