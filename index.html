@@ -59,12 +59,6 @@
   .week-header{text-align:center;margin-bottom:12px}
   .week-header h2{font-size:1.6rem;margin:0 0 2px;color:var(--brown)}
   .week-header .subtitle{font-size:.85rem;color:#666;margin:0}
-  .week-picker{display:flex;align-items:center;gap:8px;justify-content:center;flex-wrap:wrap;margin:10px 0 12px}
-  .week-picker button{padding:8px 12px;border:2px solid var(--brown);background:#fff;border-radius:12px;cursor:pointer;font-weight:bold;color:var(--brown)}
-  .week-picker input{width:auto;min-width:150px;padding:8px}
-  .week-picker strong{color:var(--brown);min-width:145px}
-  .day .cycle{font-size:.7rem;padding:4px 6px;min-height:30px;margin-bottom:4px;border-color:#7be495}
-  @media(max-width:520px){.weekgrid{grid-template-columns:repeat(2,1fr)}.week-picker strong{order:-1;width:100%}}
   
   .legend{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px;justify-content:center;font-size:.8rem}
   .legend-item{display:flex;align-items:center;gap:4px;padding:4px 10px;background:#fff;border:2px solid var(--pink-b);border-radius:12px;color:var(--brown);font-weight:bold}
@@ -157,12 +151,6 @@
   <div class="week-header">
     <h2>📅 Weekly Walk Plan</h2>
     <p class="subtitle">Two walks per day</p>
-    <div class="week-picker" aria-label="Choose week">
-      <button id="prevWeek" type="button" aria-label="Previous week">‹ Previous</button>
-      <input id="weekPicker" type="date" aria-label="Week starting date">
-      <button id="nextWeek" type="button" aria-label="Next week">Next ›</button>
-      <strong id="weekLabel"></strong>
-    </div>
   </div>
 
   <div class="legend" id="legend"></div>
@@ -179,7 +167,6 @@
     <div><strong>Cycle note:</strong> No Red walk around day 14.</div>
   </div>
 
-  <button class="main" id="saveWeekBtn" type="button">Save week plan</button>
   <button class="small" id="clearWeek" type="button" style="margin-top:8px">Clear week</button>
 </div>
 
@@ -240,6 +227,9 @@
 <div id="toast"></div>
 
 <script>
+// Replace this placeholder with the deployed Google Apps Script web-app URL when sync is added.
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzfovbTF9blYnwf9x-D-x-_sMeKXmFMpe-yAP1S3f-FJNApKfBCTdRfIvByqrISKk0X/exec';
+
 const $ = id => document.getElementById(id);
 
 /* ---------- Options & Icons ---------- */
@@ -306,95 +296,15 @@ let walks = load("accioWalks_v3", []);
 if(!Array.isArray(walks)) walks = [];
 function save(){ localStorage.setItem("accioWalks_v3", JSON.stringify(walks)); }
 
-const WEEK_KEY = "accioWeeks_v1";
-function dateMonday(value){
-  const d = new Date((value || todayStr()) + "T12:00:00");
-  const day = (d.getDay()+6)%7; d.setDate(d.getDate()-day);
-  return d.toISOString().slice(0,10);
-}
-function currentWeek(){ return dateMonday(todayStr()); }
-function blankDay(){ return {cycle:"", walks:["",""], notes:""}; }
-function normalizeWeek(w){
-  const out = {days:{}, notes:String((w&&w.notes)||""), _saved:!!(w&&w._saved)};
-  DAYS.forEach(d=>{
-    const src=(w&&w.days&&w.days[d])||{};
-    const walks=Array.isArray(src.walks)?src.walks:[];
-    out.days[d]={cycle:String(src.cycle||""), notes:String(src.notes||""), walks:walks.map(c=>WEEK_CATS.includes(c)?c:"").concat(["",""]).slice(0,2)};
-  });
-  return out;
-}
-let selectedWeek = currentWeek();
-let weeks = load(WEEK_KEY, null);
-if(!weeks || typeof weeks!=="object" || Array.isArray(weeks)) weeks = {};
-const legacyWeek = load("accioWeek_v1", null);
-if(Object.keys(weeks).length===0 && legacyWeek && legacyWeek.days){ weeks[selectedWeek] = normalizeWeek(legacyWeek); }
-Object.keys(weeks).forEach(k=>weeks[k]=normalizeWeek(weeks[k]));
-if(!weeks[selectedWeek]) weeks[selectedWeek]=normalizeWeek(null);
-saveWeeks();
-let week = weeks[selectedWeek];
-function setSelectedWeek(value){
-  selectedWeek=dateMonday(value); if(!weeks[selectedWeek]) weeks[selectedWeek]=normalizeWeek(null);
-  week=weeks[selectedWeek];
-}
-function saveWeeks(){ localStorage.setItem(WEEK_KEY, JSON.stringify(weeks)); }
-function saveWeek(){ weeks[selectedWeek]=normalizeWeek(week); saveWeeks(); }
-function weekLabel(){
-  const d=new Date(selectedWeek+"T12:00:00");
-  return "Week of "+d.toLocaleDateString(undefined,{day:"numeric",month:"short",year:"numeric"});
-}
-function weeklyRows(){
-  const rows=[];
-  Object.keys(weeks).sort().forEach(start=>{
-    const w=normalizeWeek(weeks[start]);
-    DAYS.forEach(day=>{
-      const d=w.days[day]||blankDay();
-      if(d.walks.some(Boolean)||d.notes||d.cycle||weeks[start]._saved) rows.push({weekStarting:start,day,walk1:d.walks[0]||"",walk2:d.walks[1]||"",notes:d.notes||""});
-    });
-  });
-  return rows;
-}
-// Built-in Apps Script endpoint; a non-empty localStorage override takes precedence.
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzfovbTF9blYnwf9x-D-x-_sMeKXmFMpe-yAP1S3f-FJNApKfBCTdRfIvByqrISKk0X/exec";
-const SCRIPT_URL_KEY = "accioScriptUrl_v1";
-function getScriptUrl(){
-  const override = (localStorage.getItem(SCRIPT_URL_KEY) || localStorage.getItem("accioScriptUrl") || "").trim();
-  return override || SCRIPT_URL;
-}
-function setScriptUrl(value){ localStorage.setItem(SCRIPT_URL_KEY, value.trim()); }
-function renderScriptUrlSettings(){
-  const url=getScriptUrl(); $("scriptUrl").value=url;
-  $("scriptUrlStatus").textContent=url===SCRIPT_URL ? "Using built-in default" : "Saved locally";
-}
-$("saveScriptUrl").onclick=()=>{
-  const value=$("scriptUrl").value.trim();
-  if(value && !/^https:\/\/script\.google\.com\/.*\/exec(?:[?#].*)?$/i.test(value)){
-    $("scriptUrlStatus").textContent="Please enter a Google Apps Script /exec URL"; return;
-  }
-  setScriptUrl(value); $("scriptUrlStatus").textContent=value ? "Saved locally" : "Cloud sync disabled";
-};
-async function syncCloud(){
-  const url=getScriptUrl(); if(!url) return;
-  const body={walks,daily,weeklyWalks:weeklyRows()};
-  try{
-    const response = await fetch(url,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify(body)});
-    if(!response.ok) throw new Error("HTTP "+response.status);
-    return true;
-  } catch(e){ console.warn("Cloud sync failed",e); return false; }
-}
-function pullWeekly(rows){
-  if(!Array.isArray(rows)) return;
-  rows.forEach(r=>{
-    if(!r || !r.weekStarting || !DAYS.includes(r.day)) return;
-    const key=dateMonday(r.weekStarting), prior=weeks[key]||normalizeWeek(null), old=prior.days[r.day]||blankDay();
-    prior.days[r.day]={cycle:old.cycle||"",notes:String(r.notes||""),walks:[WEEK_CATS.includes(r.walk1)?r.walk1:"",WEEK_CATS.includes(r.walk2)?r.walk2:""]};
-    weeks[key]=prior;
-  });
-  setSelectedWeek(selectedWeek); saveWeeks();
-}
-async function pullCloud(){
-  const url=getScriptUrl(); if(!url) return;
-  try{ const r=await fetch(url); const data=await r.json(); if(Array.isArray(data.walks)){walks=data.walks;save();} if(data.daily&&typeof data.daily==="object"){daily=data.daily;saveDaily();} pullWeekly(data.weeklyWalks); renderWeek(); renderDailyForm(); renderDailyHistory(); }catch(e){ console.warn("Cloud restore failed",e); }
-}
+let week = load("accioWeek_v1", null);
+if(!week || !week.days) week = {days:{}, notes:""};
+DAYS.forEach(d=>{
+  if(!week.days[d]) week.days[d] = {walks:["",""]};
+  week.days[d].walks = (week.days[d].walks||[]).map(c=>WEEK_CATS.includes(c)?c:"");
+  while(week.days[d].walks.length<2) week.days[d].walks.push("");
+  week.days[d].walks = week.days[d].walks.slice(0,2);
+});
+function saveWeek(){ localStorage.setItem("accioWeek_v1", JSON.stringify(week)); }
 
 let daily = load("accioDaily_v1", {});
 if(!daily || typeof daily!=="object" || Array.isArray(daily)) daily = {};
@@ -436,7 +346,7 @@ function drawPaws(){
 }
 
 /* ---------- Save walk ---------- */
-$("saveBtn").onclick = async () => {
+$("saveBtn").onclick = () => {
   if(!$("date").value){ toast("Pick a date"); return; }
   if(!rating){ toast("Give a rating"); return; }
   walks.push({
@@ -454,9 +364,7 @@ $("saveBtn").onclick = async () => {
     brk: (document.querySelector('input[name="brk"]:checked')||{}).value || "No",
     notes: $("notes").value
   });
-  save();
-  const synced=await syncCloud();
-  clearForm(); toast(synced ? "Walk saved to cloud 🐾" : "Walk saved locally (cloud sync failed)");
+  save(); clearForm(); toast("Walk saved 🐾");
 };
 function clearForm(){
   $("date").value = todayStr();
@@ -470,31 +378,28 @@ function clearForm(){
 
 /* ---------- Week ---------- */
 function renderWeek(){
-  $("weekPicker").value=selectedWeek; $("weekLabel").textContent=weekLabel();
   $("legend").innerHTML = WEEK_CATS.map(c=>`<div class="legend-item"><span class="icon">${CAT_INFO[c].icon}</span> ${esc(c)}</div>`).join("");
+  const jsDay = (new Date().getDay()+6)%7;
   $("weekGrid").innerHTML = DAYS.map((d,i)=>{
-    const day=week.days[d]||blankDay(), w=day.walks;
-    const sel = n => `<select data-day="${d}" data-n="${n}" style="background:${w[n] && CAT_INFO[w[n]]?CAT_BG[CAT_INFO[w[n]].color]:"#fff"}"><option value="">–</option>` + WEEK_CATS.map(c=>`<option value="${esc(c)}" ${w[n]===c?"selected":""} style="background:${CAT_BG[CAT_INFO[c].color]}">${CAT_INFO[c].icon} ${esc(c)}</option>`).join("") + `</select>`;
-    return `<div class="day"><h3><span class="icon">${DAY_SHORT[i]}</span></h3><input class="cycle" type="text" data-cycle="${d}" value="${esc(day.cycle)}" placeholder="Cycle"><div>${sel(0)}${sel(1)}</div><input class="cycle" type="text" data-notes="${d}" value="${esc(day.notes)}" placeholder="Day notes"><div class="day-paw">🐾</div></div>`;
+    const w = week.days[d].walks;
+    const sel = n => `<select data-day="${d}" data-n="${n}" style="background:${w[n] && CAT_INFO[w[n]]?CAT_BG[CAT_INFO[w[n]].color]:"#fff"}"><option value="">–</option>` +
+      WEEK_CATS.map(c=>`<option value="${esc(c)}" style="background:${CAT_BG[CAT_INFO[c].color]}">${CAT_INFO[c].icon} ${esc(c)}</option>`).join("") + `</select>`;
+    return `<div class="day"><h3><span class="icon">${DAY_SHORT[i]}</span></h3>${sel(0)}${sel(1)}<div class="day-paw">🐾</div></div>`;
   }).join("");
-  $("weekGrid").querySelectorAll("select").forEach(s=>s.onchange=()=>{ week.days[s.dataset.day].walks[+s.dataset.n]=s.value; saveWeek(); s.style.background=s.value&&CAT_INFO[s.value]?CAT_BG[CAT_INFO[s.value].color]:"#fff"; });
-  $("weekGrid").querySelectorAll("input[data-cycle]").forEach(i=>i.onchange=()=>{week.days[i.dataset.cycle].cycle=i.value;saveWeek();});
-  $("weekGrid").querySelectorAll("input[data-notes]").forEach(i=>i.onchange=()=>{week.days[i.dataset.notes].notes=i.value;saveWeek();});
-  $("weekNotes").value=week.notes||""; $("weekNotes").onchange=()=>{week.notes=$("weekNotes").value;saveWeek();};
+  $("weekGrid").querySelectorAll("select").forEach(s=>{
+    s.onchange = () => {
+      week.days[s.dataset.day].walks[+s.dataset.n] = s.value;
+      saveWeek();
+      s.style.background = s.value && CAT_INFO[s.value] ? CAT_BG[CAT_INFO[s.value].color] : "#fff";
+    };
+  });
+  $("weekNotes").value = week.notes || "";
+  $("weekNotes").onchange = () => { week.notes = $("weekNotes").value; saveWeek(); };
 }
-function changeWeek(delta){ const d=new Date(selectedWeek+"T12:00:00"); d.setDate(d.getDate()+delta*7); setSelectedWeek(d.toISOString().slice(0,10)); renderWeek(); }
-$("prevWeek").onclick=()=>changeWeek(-1); $("nextWeek").onclick=()=>changeWeek(1);
-$("weekPicker").onchange=()=>{setSelectedWeek($("weekPicker").value);renderWeek();};
-$("saveWeekBtn").onclick=async()=>{
-  week._saved=true; saveWeek();
-  const synced=await syncCloud();
-  toast(synced ? "Week plan saved to cloud 🐾" : "Week plan saved locally (cloud sync failed)");
-};
-
 $("clearWeek").onclick = () => {
   if(!confirm("Clear the whole week?")) return;
-  DAYS.forEach(d=>week.days[d] = blankDay());
-  week.notes = ""; week._saved=true;
+  DAYS.forEach(d=>week.days[d] = {walks:["",""]});
+  week.notes = "";
   saveWeek(); renderWeek(); toast("Week cleared");
 };
 
@@ -515,14 +420,12 @@ function renderDailyHistory(){
 }
 $("dcDate").value = todayStr();
 $("dcDate").onchange = renderDailyForm;
-$("dcSave").onclick = async () => {
+$("dcSave").onclick = () => {
   const date = $("dcDate").value;
   if(!date){ toast("Pick a date"); return; }
   const rec = {};
   $("dcList").querySelectorAll("input[data-k]").forEach(i=> rec[i.dataset.k] = i.checked);
-  daily[date] = rec; saveDaily();
-  const synced=await syncCloud();
-  renderDailyHistory(); toast(synced ? "Daily checks saved to cloud 🐾" : "Daily checks saved locally (cloud sync failed)");
+  daily[date] = rec; saveDaily(); renderDailyHistory(); toast("Daily checks saved 🐾");
 };
 $("dcHistory").addEventListener("click", e=>{
   const b = e.target.closest("button[data-del]");
@@ -655,11 +558,38 @@ function renderDailyReport(){
 
 /* ---------- Backup ---------- */
 $("exportBtn").onclick = () => {
-  const blob=new Blob([JSON.stringify({walks,weeks,daily},null,2)],{type:"application/json"});
-  const a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download="accio-walks-"+todayStr()+".json"; a.click();
+  const blob = new Blob([JSON.stringify({walks, week, daily},null,2)],{type:"application/json"});
+  const a = document.createElement("a"); a.href = URL.createObjectURL(blob);
+  a.download = "accio-walks-"+todayStr()+".json"; a.click();
 };
-$("importBtn").onclick=()=>$("importFile").click();
-$("importFile").onchange=e=>{ const f=e.target.files[0]; if(!f)return; const r=new FileReader(); r.onload=()=>{ try{ const d=JSON.parse(r.result); if(!Array.isArray(d.walks))throw 0; if(confirm("Replace current data with the imported file?")){ walks=d.walks;save(); if(d.weeks&&typeof d.weeks==="object"){weeks={};Object.keys(d.weeks).forEach(k=>weeks[dateMonday(k)]=normalizeWeek(d.weeks[k]));} else if(d.week&&d.week.days){weeks={};weeks[selectedWeek]=normalizeWeek(d.week);} setSelectedWeek(selectedWeek);saveWeeks(); if(d.daily&&typeof d.daily==="object"){daily=d.daily;saveDaily();} renderWeek();renderProgress();renderDailyReport();renderDailyForm();renderDailyHistory();toast("Imported ✔");} }catch(err){toast("Invalid file");} }; r.readAsText(f); };
+$("importBtn").onclick = () => $("importFile").click();
+$("importFile").onchange = e => {
+  const f = e.target.files[0]; if(!f) return;
+  const r = new FileReader();
+  r.onload = () => {
+    try{
+      const d = JSON.parse(r.result);
+      if(!Array.isArray(d.walks)) throw 0;
+      if(confirm("Replace current data with the imported file?")){
+        walks = d.walks; save();
+        if(d.week && d.week.days){
+          week = d.week;
+          DAYS.forEach(x=>{
+            if(!week.days[x]) week.days[x] = {walks:["",""]};
+            week.days[x].walks = (week.days[x].walks||[]).map(c=>WEEK_CATS.includes(c)?c:"");
+            while(week.days[x].walks.length<2) week.days[x].walks.push("");
+            week.days[x].walks = week.days[x].walks.slice(0,2);
+          });
+          saveWeek();
+        }
+        if(d.daily && typeof d.daily==="object"){ daily = d.daily; saveDaily(); }
+        renderProgress(); renderDailyReport(); renderDailyForm(); renderDailyHistory();
+        toast("Imported ✔");
+      }
+    }catch(err){ toast("Invalid file"); }
+  };
+  r.readAsText(f);
+};
 
 /* ---------- Tabs ---------- */
 function show(tab){
@@ -668,17 +598,15 @@ function show(tab){
   if(tab==="week") renderWeek();
   if(tab==="daily"){ renderDailyForm(); renderDailyHistory(); }
   if(tab==="history") renderHistory();
-  if(tab==="progress"){ renderProgress(); renderDailyReport(); renderScriptUrlSettings(); }
+  if(tab==="progress"){ renderProgress(); renderDailyReport(); }
 }
 document.querySelectorAll("nav button").forEach(b=>b.onclick=()=>show(b.dataset.tab));
 
 /* ---------- Start ---------- */
 fillCats();
-renderScriptUrlSettings();
 clearForm();
 renderWeek();
 renderDailyForm();
-pullCloud();
 </script>
 <script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v4bc70e2c01a94c73b74392e4234840661791215815920" integrity="sha512-L0ha0OXavK/8okipN9F8BtP84dg9DUhPERbBXzwI6dgTA55d2+yweo3pn5CSFYs45/r8md2+xvUPtTdvTNRfjA==" data-cf-beacon='{"version":"2024.11.0","token":"8607d2a720d14b038279025b2b5a82e5","spa":2}' crossorigin="anonymous"></script>
 </body>
