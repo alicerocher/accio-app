@@ -223,6 +223,14 @@
   <canvas id="chartDaily" width="680" height="220"></canvas>
   <div id="dcTable"></div>
 
+  <section class="card meta" id="cloudSyncSettings">
+    <h2>☁️ Cloud sync</h2>
+    <label class="q" for="scriptUrl">Apps Script web app /exec URL</label>
+    <input type="url" id="scriptUrl" placeholder="https://script.google.com/macros/s/.../exec" autocomplete="url">
+    <button class="small" id="saveScriptUrl" type="button" style="margin-top:8px">Save URL</button>
+    <span id="scriptUrlStatus" aria-live="polite" style="color:#666;font-size:.85rem"></span>
+  </section>
+
   <button class="small" id="exportBtn" type="button">Export data</button>
   <button class="small" id="importBtn" type="button">Import data</button>
   <input type="file" id="importFile" accept="application/json" class="hidden">
@@ -353,12 +361,33 @@ function weeklyRows(){
   });
   return rows;
 }
-function getScriptUrl(){ return localStorage.getItem("accioScriptUrl")||""; }
+// Built-in Apps Script endpoint; a non-empty localStorage override takes precedence.
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzfovbTF9blYnwf9x-D-x-_sMeKXmFMpe-yAP1S3f-FJNApKfBCTdRfIvByqrISKk0X/exec";
+const SCRIPT_URL_KEY = "accioScriptUrl_v1";
+function getScriptUrl(){
+  const override = (localStorage.getItem(SCRIPT_URL_KEY) || localStorage.getItem("accioScriptUrl") || "").trim();
+  return override || SCRIPT_URL;
+}
+function setScriptUrl(value){ localStorage.setItem(SCRIPT_URL_KEY, value.trim()); }
+function renderScriptUrlSettings(){
+  const url=getScriptUrl(); $("scriptUrl").value=url;
+  $("scriptUrlStatus").textContent=url===SCRIPT_URL ? "Using built-in default" : "Saved locally";
+}
+$("saveScriptUrl").onclick=()=>{
+  const value=$("scriptUrl").value.trim();
+  if(value && !/^https:\/\/script\.google\.com\/.*\/exec(?:[?#].*)?$/i.test(value)){
+    $("scriptUrlStatus").textContent="Please enter a Google Apps Script /exec URL"; return;
+  }
+  setScriptUrl(value); $("scriptUrlStatus").textContent=value ? "Saved locally" : "Cloud sync disabled";
+};
 async function syncCloud(){
   const url=getScriptUrl(); if(!url) return;
   const body={walks,daily,weeklyWalks:weeklyRows()};
-  try{ await fetch(url,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify(body)}); }
-  catch(e){ console.warn("Cloud sync failed",e); }
+  try{
+    const response = await fetch(url,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify(body)});
+    if(!response.ok) throw new Error("HTTP "+response.status);
+    return true;
+  } catch(e){ console.warn("Cloud sync failed",e); return false; }
 }
 function pullWeekly(rows){
   if(!Array.isArray(rows)) return;
@@ -415,7 +444,7 @@ function drawPaws(){
 }
 
 /* ---------- Save walk ---------- */
-$("saveBtn").onclick = () => {
+$("saveBtn").onclick = async () => {
   if(!$("date").value){ toast("Pick a date"); return; }
   if(!rating){ toast("Give a rating"); return; }
   walks.push({
@@ -433,7 +462,9 @@ $("saveBtn").onclick = () => {
     brk: (document.querySelector('input[name="brk"]:checked')||{}).value || "No",
     notes: $("notes").value
   });
-  save(); clearForm(); toast("Walk saved 🐾");
+  save();
+  const synced=await syncCloud();
+  clearForm(); toast(synced ? "Walk saved to cloud 🐾" : "Walk saved locally (cloud sync failed)");
 };
 function clearForm(){
   $("date").value = todayStr();
@@ -462,7 +493,11 @@ function renderWeek(){
 function changeWeek(delta){ const d=new Date(selectedWeek+"T12:00:00"); d.setDate(d.getDate()+delta*7); setSelectedWeek(d.toISOString().slice(0,10)); renderWeek(); }
 $("prevWeek").onclick=()=>changeWeek(-1); $("nextWeek").onclick=()=>changeWeek(1);
 $("weekPicker").onchange=()=>{setSelectedWeek($("weekPicker").value);renderWeek();};
-$("saveWeekBtn").onclick=()=>{week._saved=true;saveWeek();toast("Week plan saved 🐾");syncCloud();};
+$("saveWeekBtn").onclick=async()=>{
+  week._saved=true; saveWeek();
+  const synced=await syncCloud();
+  toast(synced ? "Week plan saved to cloud 🐾" : "Week plan saved locally (cloud sync failed)");
+};
 
 $("clearWeek").onclick = () => {
   if(!confirm("Clear the whole week?")) return;
@@ -488,12 +523,14 @@ function renderDailyHistory(){
 }
 $("dcDate").value = todayStr();
 $("dcDate").onchange = renderDailyForm;
-$("dcSave").onclick = () => {
+$("dcSave").onclick = async () => {
   const date = $("dcDate").value;
   if(!date){ toast("Pick a date"); return; }
   const rec = {};
   $("dcList").querySelectorAll("input[data-k]").forEach(i=> rec[i.dataset.k] = i.checked);
-  daily[date] = rec; saveDaily(); renderDailyHistory(); toast("Daily checks saved 🐾");
+  daily[date] = rec; saveDaily();
+  const synced=await syncCloud();
+  renderDailyHistory(); toast(synced ? "Daily checks saved to cloud 🐾" : "Daily checks saved locally (cloud sync failed)");
 };
 $("dcHistory").addEventListener("click", e=>{
   const b = e.target.closest("button[data-del]");
@@ -639,12 +676,13 @@ function show(tab){
   if(tab==="week") renderWeek();
   if(tab==="daily"){ renderDailyForm(); renderDailyHistory(); }
   if(tab==="history") renderHistory();
-  if(tab==="progress"){ renderProgress(); renderDailyReport(); }
+  if(tab==="progress"){ renderProgress(); renderDailyReport(); renderScriptUrlSettings(); }
 }
 document.querySelectorAll("nav button").forEach(b=>b.onclick=()=>show(b.dataset.tab));
 
 /* ---------- Start ---------- */
 fillCats();
+renderScriptUrlSettings();
 clearForm();
 renderWeek();
 renderDailyForm();
