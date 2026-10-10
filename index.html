@@ -281,21 +281,46 @@ function weeklyRows(){
 }
 // Optional Apps Script endpoint. Leave the placeholder to keep cloud POSTs disabled.
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzgq8l0yj4GRpAxB7KiU8KC97VWEDPorJTmngYtvg9MDZ5_VxCviot-YiGfNWtCT7-y/exec';
+const PENDING_DELETES_KEY = "accioPendingWalkDeletes_v1";
 function syncEnabled(){
   return Boolean(APPS_SCRIPT_URL && APPS_SCRIPT_URL !== 'PASTE_YOUR_APPS_SCRIPT_EXEC_URL_HERE');
 }
+function pendingWalkDeletes(){
+  const q=load(PENDING_DELETES_KEY, []);
+  return Array.isArray(q) ? q : [];
+}
+function savePendingWalkDeletes(q){ localStorage.setItem(PENDING_DELETES_KEY, JSON.stringify(q)); }
+function deleteKey(w){ return String(w && w.id != null ? w.id : ((w && w.date)||"") + "|" + ((w && w.time)||"")); }
+function queueWalkDelete(w){
+  const q=pendingWalkDeletes(), key=deleteKey(w);
+  if(!q.some(x=>String(x.id)===String(w.id) && String(x.date||"")===String(w.date||"") && String(x.time||"")===String(w.time||""))) q.push({id:w.id,date:w.date||"",time:w.time||""});
+  savePendingWalkDeletes(q); return key;
+}
+async function postCloud(body){
+  const response=await fetch(APPS_SCRIPT_URL,{
+    method:'POST', mode:'no-cors',
+    headers:{'Content-Type':'text/plain;charset=utf-8'}, body:JSON.stringify(body)
+  });
+  return response;
+}
+async function flushWalkDeletes(){
+  let q=pendingWalkDeletes(); if(!q.length || !syncEnabled()) return true;
+  const remaining=[];
+  for(const target of q){
+    try{ await postCloud({action:'delete', tab:'Walks', id:target.id, date:target.date||"", time:target.time||""}); }
+    catch(e){ remaining.push(target); }
+  }
+  savePendingWalkDeletes(remaining);
+  return remaining.length===0;
+}
 async function syncCloud(){
   if(!syncEnabled()) return false;
-  const body={walks, daily, weeklyWalks:weeklyRows()};
   try{
-    fetch(APPS_SCRIPT_URL,{
-      method:'POST',
-      mode:'no-cors',
-      headers:{'Content-Type':'text/plain;charset=utf-8'},
-      body:JSON.stringify(body)
-    });
-    return true;
-  }catch(e){ console.warn('Cloud sync failed',e); return false; }
+    const deletesOK=await flushWalkDeletes();
+    const body={action:'replace', walks, daily, weeklyWalks:weeklyRows()};
+    await postCloud(body);
+    return deletesOK;
+  }catch(e){ console.warn('Cloud sync failed; changes remain local',e); return false; }
 }
 
 let daily = load("accioDaily_v1", {});
@@ -322,7 +347,10 @@ function applyWeeklyRows(rows){
 }
 function replaceFromCloud(data){
   if(!data || typeof data !== "object") throw new Error("Invalid sync response");
-  if(Array.isArray(data.walks)) walks = data.walks;
+  if(Array.isArray(data.walks)) {
+    const blocked=new Set(pendingWalkDeletes().map(deleteKey));
+    walks = data.walks.filter(w=>!blocked.has(deleteKey(w)));
+  }
   if(data.daily && typeof data.daily === "object" && !Array.isArray(data.daily)) daily = data.daily;
   if(Array.isArray(data.weeklyWalks)) weeks = applyWeeklyRows(data.weeklyWalks);
   else if(data.weeklyWalks && typeof data.weeklyWalks === "object" && !Array.isArray(data.weeklyWalks)){
@@ -337,6 +365,7 @@ async function syncFromCloud(){
   if(!syncEnabled() || cloudSyncInFlight) return false;
   cloudSyncInFlight = true;
   try{
+    await flushWalkDeletes();
     const response = await fetch(APPS_SCRIPT_URL, {method:"GET", cache:"no-store"});
     if(!response.ok) throw new Error("Sync request failed: " + response.status);
     replaceFromCloud(await response.json());
@@ -500,9 +529,14 @@ function renderHistory(){
       <button class="small" onclick="delWalk(${w.id})" style="margin-top:6px">Delete</button>
     </div>`).join("") : "<p>No walks yet.</p>";
 }
-function delWalk(id){
+async function delWalk(id){
   if(!confirm("Delete this walk?")) return;
-  walks = walks.filter(w=>w.id!==id); save(); renderHistory(); toast("Deleted");
+  const deleted=walks.find(w=>String(w.id)===String(id));
+  walks = walks.filter(w=>String(w.id)!==String(id));
+  if(deleted) queueWalkDelete(deleted);
+  save(); renderHistory(); renderProgress();
+  const synced=await syncCloud();
+  toast(synced ? "Deleted" : "Deleted locally; will sync");
 }
 
 /* ---------- Charts ---------- */
