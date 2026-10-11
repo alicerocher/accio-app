@@ -135,7 +135,7 @@ nav{position:fixed;bottom:14px;left:50%;right:auto;width:min(760px,calc(100% - 2
     <div class="stat"><b id="sAvg">–</b>avg rating</div>
     <div class="stat"><b id="sStreak">0</b>day streak</div>
   </div>
-  <h2>Rating over time</h2>
+  <h2>Average rating per day</h2>
   <canvas id="chartTime" width="680" height="220"></canvas>
   <h2>Average rating by category</h2>
   <canvas id="chartCat" width="680" height="220"></canvas>
@@ -592,8 +592,16 @@ function renderProgress(){
   while(days.has(d.toISOString().slice(0,10))){ streak++; d.setDate(d.getDate()-1); }
   $("sStreak").textContent = streak;
 
-  const sorted = walks.slice().sort((a,b)=>a.date.localeCompare(b.date));
-  drawLine($("chartTime"), sorted.map(w=>w.rating||0), sorted.map(w=>w.date));
+  const byDay = {};
+  walks.forEach(w=>{
+    (byDay[w.date] = byDay[w.date] || []).push(w.rating||0);
+  });
+  const dates = Object.keys(byDay).sort();
+  const dailyAverages = dates.map(date=>{
+    const ratings = byDay[date];
+    return ratings.reduce((sum,rating)=>sum+rating,0) / ratings.length;
+  });
+  drawLine($("chartTime"), dailyAverages, dates);
 
   const by = {};
   walks.forEach(w=>{ (by[w.category] = by[w.category] || []).push(w.rating||0); });
@@ -666,8 +674,5 @@ renderWeek();
 renderDailyForm();
 syncFromCloud();
 </script>
-<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v4bc70e2c01a94c73b74392e4234840661791215815920" integrity="sha512-L0ha0OXavK/8okipN9F8BtP84dg9DUhPERbBXzwI6dgTA55d2+yweo3pn5CSFYs45/r8md2+xvUPtTdvTNRfjA==" data-cf-beacon='{"version":"2024.11.0","token":"8607d2a720d14b038279025b2b5a82e5","spa":2}' crossorigin="anonymous"></script>
-<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v4bc70e2c01a94c73b74392e4234840661791215815920" integrity="sha512-L0ha0OXavK/8okipN9F8BtP84dg9DUhPERbBXzwI6dgTA55d2+yweo3pn5CSFYs45/r8md2+xvUPtTdvTNRfjA==" data-cf-beacon='{"version":"2024.11.0","token":"8607d2a720d14b038279025b2b5a82e5","spa":2}' crossorigin="anonymous"></script>
-<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v4bc70e2c01a94c73b74392e4234840661791215815920" integrity="sha512-L0ha0OXavK/8okipN9F8BtP84dg9DUhPERbBXzwI6dgTA55d2+yweo3pn5CSFYs45/r8md2+xvUPtTdvTNRfjA==" data-cf-beacon='{"version":"2024.11.0","token":"8607d2a720d14b038279025b2b5a82e5","spa":2}' crossorigin="anonymous"></script>
 </body>
 </html>
