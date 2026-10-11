@@ -135,10 +135,19 @@ nav{position:fixed;bottom:14px;left:50%;right:auto;width:min(760px,calc(100% - 2
     <div class="stat"><b id="sAvg">–</b>avg rating</div>
     <div class="stat"><b id="sStreak">0</b>day streak</div>
   </div>
-  <h2>Average rating per day</h2>
+  <h2>Rating over time</h2>
   <canvas id="chartTime" width="680" height="220"></canvas>
   <h2>Average rating by category</h2>
   <canvas id="chartCat" width="680" height="220"></canvas>
+
+  <h2>Weekly planned-walk difficulty</h2>
+  <p class="subtitle">Green = 1 point · orange = 2 points · red = 3 points</p>
+  <div class="stats">
+    <div class="stat"><b id="weekRatingLast">–</b>last week</div>
+    <div class="stat"><b id="weekRatingCurrent">–</b>current week</div>
+    <div class="stat"><b id="weekRatingNext">–</b>next week</div>
+  </div>
+  <canvas id="chartWeekly" width="680" height="220"></canvas>
 
   <h2 style="font-size:1.1rem">Daily checks: points per day (max 7)</h2>
   <div class="stats">
@@ -567,11 +576,12 @@ function drawLine(cv, vals, labels){
 }
 function drawBars(cv, vals, labels){
   const x = cv.getContext("2d"), w = cv.width, h = cv.height;
-  drawAxes(x,w,h,5);
+  const max = Math.max(5, ...vals, 1);
+  drawAxes(x,w,h,max);
   if(!vals.length){ x.fillText("No data yet",40,h/2); return; }
   const slot = (w-50)/vals.length, bw = Math.min(50, slot*0.6);
   vals.forEach((v,i)=>{
-    const bx = 40+i*slot+(slot-bw)/2, bh = (v/5)*(h-50);
+    const bx = 40+i*slot+(slot-bw)/2, bh = (v/max)*(h-50);
     x.fillStyle="#7be495"; x.fillRect(bx,h-30-bh,bw,bh);
     x.fillStyle="#4a1c0e"; x.textAlign="center";
     x.fillText(v.toFixed(1),bx+bw/2,h-34-bh);
@@ -593,20 +603,46 @@ function renderProgress(){
   $("sStreak").textContent = streak;
 
   const byDay = {};
-  walks.forEach(w=>{
-    (byDay[w.date] = byDay[w.date] || []).push(w.rating||0);
-  });
-  const dates = Object.keys(byDay).sort();
-  const dailyAverages = dates.map(date=>{
-    const ratings = byDay[date];
-    return ratings.reduce((sum,rating)=>sum+rating,0) / ratings.length;
-  });
-  drawLine($("chartTime"), dailyAverages, dates);
+  walks.forEach(w=>{ if(!w.date) return; (byDay[w.date] = byDay[w.date] || []).push(Number(w.rating)||0); });
+  const dayLabels = Object.keys(byDay).sort();
+  const dayAverages = dayLabels.map(date=>{ const ratings=byDay[date]; return ratings.reduce((sum,r)=>sum+r,0)/ratings.length; });
+  drawLine($("chartTime"), dayAverages, dayLabels);
 
   const by = {};
   walks.forEach(w=>{ (by[w.category] = by[w.category] || []).push(w.rating||0); });
   const labels = Object.keys(by);
   drawBars($("chartCat"), labels.map(l=>by[l].reduce((a,b)=>a+b,0)/by[l].length), labels);
+
+  renderWeeklyDifficulty();
+}
+
+function weeklyDifficulty(start){
+  const w = normalizeWeek(weeks[start]);
+  let sum = 0, count = 0;
+  DAYS.forEach(day=>{
+    (w.days[day] && w.days[day].walks || []).forEach(category=>{
+      if(!category || !CAT_INFO[category]) return;
+      const color = CAT_INFO[category].color;
+      sum += color === "green" ? 1 : color === "orange" ? 2 : color === "red" ? 3 : 0;
+      count++;
+    });
+  });
+  return {sum,count};
+}
+function weekRatingText(result){ return result.count ? result.sum + " pts" : "–"; }
+function renderWeeklyDifficulty(){
+  const current = dateMonday(todayStr());
+  const previousDate = new Date(current+"T12:00:00"); previousDate.setDate(previousDate.getDate()-7);
+  const nextDate = new Date(current+"T12:00:00"); nextDate.setDate(nextDate.getDate()+7);
+  const starts = [previousDate.toISOString().slice(0,10), current, nextDate.toISOString().slice(0,10)];
+  const ratings = starts.map(start=>weeklyDifficulty(start));
+  $("weekRatingLast").textContent = weekRatingText(ratings[0]);
+  $("weekRatingCurrent").textContent = weekRatingText(ratings[1]);
+  $("weekRatingNext").textContent = weekRatingText(ratings[2]);
+  const savedStarts = Object.keys(weeks).sort();
+  const graphStarts = [...new Set(savedStarts.concat(starts))].sort();
+  const graphValues = graphStarts.map(start=>weeklyDifficulty(start).sum);
+  drawBars($("chartWeekly"), graphValues, graphStarts.map(start=>start.slice(5)));
 }
 
 /* ---------- Daily points report ---------- */
