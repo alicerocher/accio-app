@@ -898,41 +898,7 @@ function renderDailyReport(){
     )
     .join("");
 }
-  const dates = Object.keys(daily).sort();
-  const pts = dates.map(d=>dcPoints(daily[d]));
-  const today = todayStr();
-  $("dcToday").textContent = daily[today] ? pts[dates.indexOf(today)] : "–";
-  $("dcAvg").textContent = pts.length ? (pts.reduce((a,b)=>a+b,0)/pts.length).toFixed(1) : "–";
-  $("dcBest").textContent = pts.length ? Math.max(...pts) : "–";
 
-  const last = dates.slice(-30), lp = pts.slice(-30);
-  const cv = $("chartDaily"), x = cv.getContext("2d"), w = cv.width, h = cv.height;
-  x.clearRect(0,0,w,h);
-  x.font = "12px sans-serif"; x.textAlign = "left";
-  const max = DC_QUESTIONS.length, top = 20, bot = h-30, left = 30, right = w-10;
-  x.strokeStyle = "#ddd"; x.fillStyle = "#666";
-  for(let i=0;i<=max;i++){
-    const y = bot - (i/max)*(bot-top);
-    x.beginPath(); x.moveTo(left,y); x.lineTo(right,y); x.stroke();
-    x.fillText(i, 10, y+4);
-  }
-  if(!last.length){ x.fillText("No daily checks yet", left+10, h/2); $("dcTable").innerHTML=""; return; }
-  const slot = (right-left)/last.length, bw = Math.min(30, slot*0.7);
-  last.forEach((d,i)=>{
-    const bx = left + i*slot + (slot-bw)/2;
-    const bh = (lp[i]/max)*(bot-top);
-    x.fillStyle = lp[i]===max ? "#7be495" : lp[i]>=max/2 ? "#ffb86b" : "#ff9bb8";
-    x.fillRect(bx, bot-bh, bw, bh);
-    x.fillStyle = "#4a1c0e"; x.textAlign = "center";
-    x.fillText(lp[i], bx+bw/2, bot-bh-4);
-    if(last.length<=15 || i%Math.ceil(last.length/12)===0) x.fillText(d.slice(5), bx+bw/2, h-10);
-  });
-  x.textAlign = "left";
-
-  $("dcTable").innerHTML = dates.slice().reverse().slice(0,14).map(d=>
-    `<div class="dc-hist"><b>${esc(d)}</b> · ${dcPoints(daily[d])}/${DC_QUESTIONS.length} points</div>`
-  ).join("");
-}
 
 /* ---------- Backup ---------- */
 $("exportBtn").onclick = () => {
