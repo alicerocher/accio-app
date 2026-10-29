@@ -20,7 +20,58 @@ nav{position:fixed;bottom:14px;left:50%;right:auto;width:min(760px,calc(100% - 2
 @keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
 @media(max-width:640px){header{padding-top:28px}main{padding-left:12px;padding-right:12px}.row{flex-direction:column;gap:0}section.card,.dc-card{padding:18px;border-radius:21px}.weekgrid{grid-template-columns:repeat(2,1fr)}.week-picker strong{order:-1;width:100%}.stats{gap:8px}.stat{padding:12px 6px}.stat b{font-size:1.55rem}nav{bottom:9px;width:calc(100% - 18px);border-radius:17px}nav button{font-size:.68rem;padding:9px 2px}}
 @media(prefers-color-scheme:dark){:root{--ink:#f6eef1;--muted:#b9aab0;--cream:#211b20;--surface:rgba(48,38,46,.78);--line:#574650;--plum:#ffd6e2}body{background:radial-gradient(circle at 15% 0%,#412b39,transparent 35%),linear-gradient(145deg,#211b20,#181719);color:var(--ink)}header h1{color:#ffe3ec}input[type=text],input[type=date],select,textarea,.day select{background:rgba(38,30,36,.9);color:var(--ink);border-color:#674e5a}.meta,.walk,.stat,.day,.dc-item,.dc-hist,canvas{background:rgba(48,38,46,.78)}.chips label,.yn label,.week-picker button,.small{background:rgba(48,38,46,.88);color:var(--ink);border-color:#674e5a}nav{background:rgba(38,30,36,.88)}.week-cycle-note{color:#ffd7ad}}
+.dashboard-filter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+  padding: 13px 16px;
+  background: rgba(255,255,255,.72);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  color: var(--plum);
+  font-weight: 700;
+}
 
+.dashboard-filter select {
+  width: auto;
+  min-width: 170px;
+}
+
+.progress-insight {
+  margin-bottom: 16px;
+  padding: 15px 17px;
+  border: 1px solid rgba(229,141,168,.35);
+  border-radius: 17px;
+  background: linear-gradient(135deg, var(--rose-soft), rgba(255,255,255,.75));
+  color: var(--plum);
+  box-shadow: var(--shadow-sm);
+}
+
+.progress-insight strong {
+  display: block;
+  margin-bottom: 4px;
+}
+
+@media(max-width:640px) {
+  .dashboard-filter {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .dashboard-filter select {
+    width: 100%;
+  }
+}
+
+@media(prefers-color-scheme:dark) {
+  .dashboard-filter,
+  .progress-insight {
+    background: rgba(48,38,46,.88);
+    color: var(--ink);
+  }
+}
 </style>
 </head>
 <body>
@@ -130,6 +181,17 @@ nav{position:fixed;bottom:14px;left:50%;right:auto;width:min(760px,calc(100% - 2
 
 <!-- PROGRESS -->
 <div id="tab-progress" class="hidden">
+    <div class="dashboard-filter">
+    <label for="progressPeriod">Période affichée</label>
+    <select id="progressPeriod">
+      <option value="7">7 derniers jours</option>
+      <option value="30" selected>30 derniers jours</option>
+      <option value="90">90 derniers jours</option>
+      <option value="all">Toutes les balades</option>
+    </select>
+  </div>
+
+  <div id="progressInsight" class="progress-insight" aria-live="polite"></div>
   <div class="stats">
     <div class="stat"><b id="sTotal">0</b>walks</div>
     <div class="stat"><b id="sAvg">–</b>avg rating</div>
@@ -594,27 +656,110 @@ function drawBars(cv, vals, labels){
 
 /* ---------- Progress ---------- */
 function renderProgress(){
-  $("sTotal").textContent = walks.length;
-  $("sAvg").textContent = walks.length ? (walks.reduce((s,w)=>s+(w.rating||0),0)/walks.length).toFixed(1) : "–";
-  const days = new Set(walks.map(w=>w.date));
-  let streak = 0, d = new Date();
-  if(!days.has(d.toISOString().slice(0,10))) d.setDate(d.getDate()-1);
-  while(days.has(d.toISOString().slice(0,10))){ streak++; d.setDate(d.getDate()-1); }
+  const period = $("progressPeriod")?.value || "30";
+  const today = todayStr();
+
+  // Filtre les balades par période.
+  const filteredWalks = walks.filter(w => {
+    if(!w.date) return false;
+    if(period === "all") return true;
+
+    const walkDate = new Date(w.date + "T12:00:00");
+    const todayDate = new Date(today + "T12:00:00");
+    const daysAgo = Math.floor((todayDate - walkDate) / 86400000);
+
+    return daysAgo >= 0 && daysAgo < Number(period);
+  });
+
+  const ratings = filteredWalks
+    .map(w => Number(w.rating) || 0)
+    .filter(r => r > 0);
+
+  // Statistiques de la période sélectionnée.
+  $("sTotal").textContent = filteredWalks.length;
+  $("sAvg").textContent = ratings.length
+    ? (ratings.reduce((sum, rating) => sum + rating, 0) / ratings.length).toFixed(1)
+    : "–";
+
+  // Série de jours consécutifs avec au moins une balade.
+  const daysWithWalks = new Set(walks.map(w => w.date).filter(Boolean));
+  let streak = 0;
+  let streakDate = new Date(today + "T12:00:00");
+
+  if(!daysWithWalks.has(today)){
+    streakDate.setDate(streakDate.getDate() - 1);
+  }
+
+  while(daysWithWalks.has(streakDate.toISOString().slice(0, 10))){
+    streak++;
+    streakDate.setDate(streakDate.getDate() - 1);
+  }
+
   $("sStreak").textContent = streak;
 
+  // Note moyenne par jour.
   const byDay = {};
-  walks.forEach(w=>{ if(!w.date) return; (byDay[w.date] = byDay[w.date] || []).push(Number(w.rating)||0); });
+  filteredWalks.forEach(w => {
+    const rating = Number(w.rating) || 0;
+    if(!w.date || !rating) return;
+
+    if(!byDay[w.date]) byDay[w.date] = [];
+    byDay[w.date].push(rating);
+  });
+
   const dayLabels = Object.keys(byDay).sort();
-  const dayAverages = dayLabels.map(date=>{ const ratings=byDay[date]; return ratings.reduce((sum,r)=>sum+r,0)/ratings.length; });
+  const dayAverages = dayLabels.map(date => {
+    const dayRatings = byDay[date];
+    return dayRatings.reduce((sum, rating) => sum + rating, 0) / dayRatings.length;
+  });
+
   drawLine($("chartTime"), dayAverages, dayLabels);
 
-  const by = {};
-  walks.forEach(w=>{ (by[w.category] = by[w.category] || []).push(w.rating||0); });
-  const labels = Object.keys(by);
-  drawBars($("chartCat"), labels.map(l=>by[l].reduce((a,b)=>a+b,0)/by[l].length), labels);
+  // Note moyenne par catégorie.
+  const byCategory = {};
+  filteredWalks.forEach(w => {
+    const rating = Number(w.rating) || 0;
+    if(!w.category || !rating) return;
 
+    if(!byCategory[w.category]) byCategory[w.category] = [];
+    byCategory[w.category].push(rating);
+  });
+
+  const categories = Object.keys(byCategory);
+  const categoryAverages = categories.map(category => {
+    const values = byCategory[category];
+    return values.reduce((sum, rating) => sum + rating, 0) / values.length;
+  });
+
+  drawBars($("chartCat"), categoryAverages, categories);
+
+  // Observation sur la catégorie la mieux notée.
+  const insight = $("progressInsight");
+
+  if(!filteredWalks.length){
+    insight.innerHTML =
+      "<strong>🐾 Pas encore de balade pour cette période</strong>" +
+      "Enregistre une balade pour commencer à voir tes tendances.";
+  } else if(!categories.length){
+    insight.innerHTML =
+      "<strong>✨ Petit aperçu</strong>" +
+      "Ajoute une note à tes balades pour découvrir tes catégories préférées.";
+  } else {
+    const bestIndex = categoryAverages.indexOf(Math.max(...categoryAverages));
+    const bestCategory = categories[bestIndex];
+    const bestAverage = categoryAverages[bestIndex].toFixed(1);
+
+    insight.innerHTML =
+      `<strong>✨ Petit aperçu</strong>` +
+      `Ta catégorie la mieux notée est <b>${esc(bestCategory)}</b>, ` +
+      `avec une moyenne de <b>${bestAverage}/5</b> sur cette période.`;
+  }
+
+  // Les graphiques de planification restent inchangés.
   renderWeeklyDifficulty();
 }
+
+$("progressPeriod").onchange = renderProgress;
 
 function weeklyDifficulty(start){
   const w = normalizeWeek(weeks[start]);
