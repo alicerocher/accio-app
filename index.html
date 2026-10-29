@@ -759,7 +759,10 @@ function renderProgress(){
   renderWeeklyDifficulty();
 }
 
-$("progressPeriod").onchange = renderProgress;
+$("progressPeriod").onchange = () => {
+  renderProgress();
+  renderDailyReport();
+};
 
 function weeklyDifficulty(start){
   const w = normalizeWeek(weeks[start]);
@@ -793,6 +796,108 @@ function renderWeeklyDifficulty(){
 /* ---------- Daily points report ---------- */
 function dcPoints(rec){ return DC_QUESTIONS.filter(([k])=>rec && rec[k]).length; }
 function renderDailyReport(){
+  const period = $("progressPeriod")?.value || "30";
+  const today = todayStr();
+
+  const allDates = Object.keys(daily).sort();
+
+  const filteredDates = allDates.filter(date => {
+    if(period === "all") return true;
+
+    const recordDate = new Date(date + "T12:00:00");
+    const todayDate = new Date(today + "T12:00:00");
+    const daysAgo = Math.floor((todayDate - recordDate) / 86400000);
+
+    return daysAgo >= 0 && daysAgo < Number(period);
+  });
+
+  const points = filteredDates.map(date => dcPoints(daily[date]));
+
+  // Le score d'aujourd'hui ne dépend pas de la période choisie.
+  $("dcToday").textContent = daily[today]
+    ? dcPoints(daily[today])
+    : "–";
+
+  // Moyenne et meilleur score selon la période sélectionnée.
+  $("dcAvg").textContent = points.length
+    ? (points.reduce((sum, value) => sum + value, 0) / points.length).toFixed(1)
+    : "–";
+
+  $("dcBest").textContent = points.length
+    ? Math.max(...points)
+    : "–";
+
+  // Graphique des daily checks.
+  const dates = filteredDates.slice(-30);
+  const chartPoints = points.slice(-30);
+
+  const cv = $("chartDaily");
+  const x = cv.getContext("2d");
+  const w = cv.width;
+  const h = cv.height;
+
+  x.clearRect(0, 0, w, h);
+  x.font = "12px sans-serif";
+  x.textAlign = "left";
+
+  const max = DC_QUESTIONS.length;
+  const top = 20;
+  const bot = h - 30;
+  const left = 30;
+  const right = w - 10;
+
+  x.strokeStyle = "#ddd";
+  x.fillStyle = "#666";
+
+  for(let i = 0; i <= max; i++){
+    const y = bot - (i / max) * (bot - top);
+    x.beginPath();
+    x.moveTo(left, y);
+    x.lineTo(right, y);
+    x.stroke();
+    x.fillText(i, 10, y + 4);
+  }
+
+  if(!dates.length){
+    x.fillText("No daily checks for this period", left + 10, h / 2);
+  } else {
+    const slot = (right - left) / dates.length;
+    const bw = Math.min(30, slot * 0.7);
+
+    dates.forEach((date, i) => {
+      const bx = left + i * slot + (slot - bw) / 2;
+      const barHeight = (chartPoints[i] / max) * (bot - top);
+
+      x.fillStyle = chartPoints[i] === max
+        ? "#7be495"
+        : chartPoints[i] >= max / 2
+          ? "#ffb86b"
+          : "#ff9bb8";
+
+      x.fillRect(bx, bot - barHeight, bw, barHeight);
+
+      x.fillStyle = "#4a1c0e";
+      x.textAlign = "center";
+      x.fillText(chartPoints[i], bx + bw / 2, bot - barHeight - 4);
+
+      if(dates.length <= 15 || i % Math.ceil(dates.length / 12) === 0){
+        x.fillText(date.slice(5), bx + bw / 2, h - 10);
+      }
+    });
+  }
+
+  x.textAlign = "left";
+
+  // Historique limité à la même période.
+  $("dcTable").innerHTML = filteredDates
+    .slice()
+    .reverse()
+    .slice(0, 14)
+    .map(date =>
+      `<div class="dc-hist"><b>${esc(date)}</b> · ${dcPoints(daily[date])}/${DC_QUESTIONS.length} points</div>`
+    )
+    .join("");
+}
   const dates = Object.keys(daily).sort();
   const pts = dates.map(d=>dcPoints(daily[d]));
   const today = todayStr();
